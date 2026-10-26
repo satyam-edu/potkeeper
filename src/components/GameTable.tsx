@@ -1,12 +1,17 @@
+import { useEffect, useState } from 'react';
 import type { ClientMessage, RoomState } from '../../shared/types';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees } from '../lib/format';
 import { ActionBar } from './ActionBar';
 import { PotButton } from './PotButton';
 import { SeatCard } from './SeatCard';
+import { ShowdownModal } from './ShowdownModal';
 
 export function GameTable({ state, meId, send }: { state: RoomState; meId: string; send: (m: ClientMessage) => void }) {
+  const [showdown, setShowdown] = useState(false);
   const isHost = state.hostId === meId;
+  // Round ended under us (e.g. everyone else packed): drop the stale modal so it can't reopen next round.
+  useEffect(() => { if (state.phase !== 'BETTING') setShowdown(false); }, [state.phase]);
   const me = state.players.find((p) => p.userId === meId);
   const turnId = state.players[state.currentTurnIndex]?.userId;
   const myTurn = state.phase === 'BETTING' && turnId === meId && me?.status === 'ACTIVE';
@@ -15,7 +20,10 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const seat = (p: (typeof seats)[number]) => (
     <SeatCard p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
   );
-  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} />; // tap-to-award arrives with the showdown modal
+  // Host or any ACTIVE player can call the showdown, since cards are flipped on the real table.
+  const canAward = state.phase === 'BETTING' && (isHost || me?.status === 'ACTIVE');
+  const active = state.players.filter((p) => p.status === 'ACTIVE');
+  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
 
   return (
     <div className="flex flex-1 flex-col gap-3">
@@ -62,6 +70,14 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           </p>
           <ActionBar canAct={myTurn} baseBet={state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} />
         </>
+      )}
+      {showdown && state.phase === 'BETTING' && (
+        <ShowdownModal
+          pot={state.pot}
+          active={active}
+          onAward={(ids) => { send({ t: 'AWARD_POT', winnerIds: ids }); setShowdown(false); }}
+          onClose={() => setShowdown(false)}
+        />
       )}
       <p className="sr-only">Pot {rupees(state.pot)}</p>
     </div>
