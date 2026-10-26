@@ -23,10 +23,10 @@ export function NamePrompt({ onDone, label = 'Continue' }: { onDone: (s: Session
         maxLength={24}
         placeholder="Your name"
         autoFocus
-        className="h-14 rounded-xl bg-panel px-4 text-lg outline-none ring-emerald-500 focus:ring-2"
+        className="h-14 rounded-xl bg-surface px-4 text-lg outline-none ring-neon focus:ring-2"
       />
       {err && <p className="text-sm text-red-400">{err}</p>}
-      <button disabled={!name.trim() || busy} className="h-14 rounded-xl bg-emerald-500 text-lg font-extrabold text-ink disabled:bg-slate-700 disabled:text-slate-400">
+      <button disabled={!name.trim() || busy} className="h-14 rounded-xl bg-neon text-lg font-extrabold text-ink disabled:bg-surface-2 disabled:text-mid">
         {label}
       </button>
     </form>

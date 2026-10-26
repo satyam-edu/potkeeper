@@ -1,24 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #050b09;
-  --color-felt-900: #062a1f;
-  --color-felt-800: #0a3b2c;
-  --color-felt-700: #0f5a42;
-  --color-panel: #0f172a;
-  --color-gold-400: #fbbf24;
-  --color-gold-600: #d97706;
-  --color-text-mid: #94a3b8;
+  --color-ink: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1f1f1f;
+  --color-line: #2b2b2b;
+  --color-paper: #f2f2f2;
+  --color-neon: #c6ff00;
+  --color-neon-dim: #8fb300;
+  --color-mid: #9a9a9a;
+  --color-danger: #ff4d4d;
+  --font-display: "Oswald", "Arial Narrow", Impact, sans-serif;
 }
 
 body {
   margin: 0;
   background: var(--color-ink);
-  color: #ecfdf5;
+  color: #fff;
   font-family: ui-sans-serif, system-ui, sans-serif;
   touch-action: manipulation;
 }
 
-.felt {
-  background: radial-gradient(ellipse at 50% 30%, var(--color-felt-800) 0%, var(--color-felt-900) 55%, var(--color-ink) 100%);
+.stage {
+  background: radial-gradient(ellipse at 50% 0%, #1b2400 0%, var(--color-ink) 60%);
+}
+
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }

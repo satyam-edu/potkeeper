@@ -38,15 +38,15 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
 
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <section className="rounded-2xl bg-felt-800/70 p-4">
-        <p className="text-xs text-text-mid">ROOM CODE</p>
-        <p className="text-5xl font-extrabold tracking-widest text-gold-400 tabular-nums">{state.code}</p>
-        <p className="mt-1 truncate text-sm text-text-mid">{link}</p>
+      <section className="rounded-2xl bg-surface p-4">
+        <p className="text-xs text-mid">ROOM CODE</p>
+        <p className="display text-6xl font-bold tracking-widest text-neon tabular-nums">{state.code}</p>
+        <p className="mt-1 truncate text-sm text-mid">{link}</p>
         <div className="mt-3 flex gap-2">
-          <button onClick={copy} className="h-12 flex-1 rounded-xl bg-felt-700 font-bold active:scale-[.98]">
+          <button onClick={copy} className="h-12 flex-1 rounded-xl bg-surface-2 font-bold active:scale-[.98]">
             {copied ? 'Copied ✓' : 'Copy link'}
           </button>
-          <button onClick={toggleQr} className="h-12 flex-1 rounded-xl bg-felt-700 font-bold active:scale-[.98]">
+          <button onClick={toggleQr} className="h-12 flex-1 rounded-xl bg-surface-2 font-bold active:scale-[.98]">
             {qr ? 'Hide QR' : 'Show QR'}
           </button>
         </div>
@@ -54,7 +54,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-text-mid">BASE BET</p>
+        <p className="mb-2 text-xs text-mid">BASE BET</p>
         <div className="flex gap-2">
           {PRESETS.map((n) => (
             <button
@@ -62,7 +62,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
               disabled={!isHost}
               onClick={() => send({ t: 'SET_BASE_BET', baseBet: n })}
               className={`h-12 flex-1 rounded-xl font-extrabold tabular-nums ${
-                state.baseBet === n ? 'bg-emerald-500 text-ink' : 'bg-panel text-white'
+                state.baseBet === n ? 'bg-neon text-ink' : 'bg-surface text-white'
               } ${isHost ? 'active:scale-[.97]' : 'opacity-70'}`}
             >
               ₹{n}
@@ -72,23 +72,23 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
       </section>
 
       <section className="flex-1">
-        <p className="mb-2 text-xs text-text-mid">
+        <p className="mb-2 text-xs text-mid">
           SEATING (clockwise) · {live.length}/{MAX_PLAYERS}
         </p>
         <ul className="flex flex-col gap-2">
           {live.map((p, i) => (
-            <li key={p.userId} className="flex items-center gap-3 rounded-xl bg-panel px-3 py-3">
-              <span className="w-5 text-center font-bold text-text-mid">{i + 1}</span>
-              <span className={`h-2.5 w-2.5 rounded-full ${p.connected ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+            <li key={p.userId} className="flex items-center gap-3 rounded-xl bg-surface px-3 py-3">
+              <span className="w-5 text-center font-bold text-mid">{i + 1}</span>
+              <span className={`h-2.5 w-2.5 rounded-full ${p.connected ? 'bg-neon' : 'bg-line'}`} />
               <span className="flex-1 truncate font-semibold">
                 {p.name}
-                {p.userId === meId && <span className="ml-2 text-xs text-gold-400">YOU</span>}
-                {p.userId === state.hostId && <span className="ml-2 text-xs text-emerald-400">HOST</span>}
+                {p.userId === meId && <span className="ml-2 text-xs text-neon">YOU</span>}
+                {p.userId === state.hostId && <span className="ml-2 text-xs text-neon">HOST</span>}
               </span>
               {isHost && (
                 <span className="flex gap-1">
-                  <button aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)} className="h-10 w-10 rounded-lg bg-felt-700 disabled:opacity-30">▲</button>
-                  <button aria-label={`Move ${p.name} down`} disabled={i === live.length - 1} onClick={() => move(i, 1)} className="h-10 w-10 rounded-lg bg-felt-700 disabled:opacity-30">▼</button>
+                  <button aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▲</button>
+                  <button aria-label={`Move ${p.name} down`} disabled={i === live.length - 1} onClick={() => move(i, 1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▼</button>
                 </span>
               )}
             </li>
@@ -100,12 +100,12 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
         <button
           disabled={live.length < MIN_PLAYERS}
           onClick={() => send({ t: 'START_ROUND' })}
-          className="h-16 rounded-2xl bg-emerald-500 text-xl font-extrabold uppercase tracking-wide text-ink shadow-[0_4px_0_#047857] active:translate-y-[2px] active:shadow-none disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none"
+          className="h-16 rounded-2xl bg-neon display text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none"
         >
           {live.length < MIN_PLAYERS ? 'Waiting for players…' : 'Start Game'}
         </button>
       ) : (
-        <p className="py-4 text-center text-text-mid">Waiting for the host to start…</p>
+        <p className="py-4 text-center text-mid">Waiting for the host to start…</p>
       )}
     </div>
   );
