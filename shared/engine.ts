@@ -20,6 +20,12 @@ export type Action =
 
 export type Result = { ok: true; state: RoomState } | { ok: false; error: EngineError };
 
+/** Integer split of a pot between k winners; the remainder carries to the next round. */
+export function splitPot(pot: number, k: number): { share: number; remainder: number } {
+  const share = Math.floor(pot / k);
+  return { share, remainder: pot - share * k };
+}
+
 const ok = (state: RoomState): Result => ({ ok: true, state });
 const err = (error: EngineError): Result => ({ ok: false, error });
 
@@ -200,7 +206,7 @@ function award(s: RoomState, winnerIds: string[]): Result {
   const winners = s.players.filter((p) => ids.has(p.userId));
   if (winners.length !== ids.size) return err('NOT_FOUND');
   if (winners.some((p) => p.status !== 'ACTIVE')) return err('NOT_ACTIVE');
-  const share = Math.floor(s.pot / ids.size);
+  const { share, remainder } = splitPot(s.pot, ids.size);
   const players = s.players.map((p) => ({
     ...p,
     sessionBalance: p.sessionBalance + (ids.has(p.userId) ? share : 0),
@@ -209,7 +215,7 @@ function award(s: RoomState, winnerIds: string[]): Result {
   return ok({
     ...s,
     players,
-    carryOverPot: s.pot - share * ids.size,
+    carryOverPot: remainder,
     pot: 0,
     phase: 'BETWEEN_ROUNDS',
     currentTurnIndex: -1,

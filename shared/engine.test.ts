@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRoom, reduce, checkInvariant, type Action } from './engine';
+import { createRoom, reduce, checkInvariant, splitPot, type Action } from './engine';
 import type { RoomState } from './types';
 
 const ids = ['p1', 'p2', 'p3', 'p4'];
@@ -107,6 +107,14 @@ describe('award pot', () => {
     s = run(s, { type: 'PACK' }, 'p2'); // packed non-host can't award
     expect(code(s, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p2')).toBe('NOT_ALLOWED');
     expect(code(s, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p1')).toBe('OK'); // host may
+  });
+});
+
+describe('splitPot', () => {
+  it('floors the share and returns the remainder', () => {
+    expect(splitPot(15, 2)).toEqual({ share: 7, remainder: 1 });
+    expect(splitPot(35, 1)).toEqual({ share: 35, remainder: 0 });
+    expect(splitPot(10, 3)).toEqual({ share: 3, remainder: 1 });
   });
 });
 
