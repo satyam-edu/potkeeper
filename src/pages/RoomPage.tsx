@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { GameTable } from '../components/GameTable';
 import { Lobby } from '../components/Lobby';
 import { NamePrompt } from '../components/NamePrompt';
 import { Toast } from '../components/Toast';
@@ -36,26 +37,21 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p className="text-xl font-bold">Room {code} not found</p>
-        <p className="text-text-mid">Check the code with the host.</p>
-        <button onClick={() => go('/')} className="h-12 rounded-xl bg-felt-700 px-6 font-bold">Back</button>
+        <p className="text-mid">Check the code with the host.</p>
+        <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
       </div>
     );
   }
-  if (!state) return <p className="m-auto text-text-mid">Connecting…</p>;
+  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
 
   return (
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
-      {!online && <p className="mb-2 rounded-lg bg-amber-500/20 py-1 text-center text-sm text-gold-400">Reconnecting…</p>}
+      {!online && <p className="mb-2 rounded-lg bg-neon/15 py-1 text-center text-sm text-neon">Reconnecting…</p>}
       {state.phase === 'LOBBY' ? (
         <Lobby state={state} meId={session.userId} send={send} />
       ) : (
-        // Game table lands in P2-05..P2-07
-        <div className="m-auto text-center">
-          <p className="text-2xl font-bold">Round {state.roundNumber} · {state.phase}</p>
-          <p className="mt-2 text-4xl font-extrabold text-gold-400">POT ₹{state.pot}</p>
-          <p className="mt-4 text-text-mid">Table UI coming in the next step</p>
-        </div>
+        <GameTable state={state} meId={session.userId} send={send} />
       )}
     </>
   );
