@@ -3,11 +3,13 @@ import { splitPot } from '../../shared/engine';
 import type { Player } from '../../shared/types';
 import { rupees } from '../lib/format';
 import { ConfirmModal } from './ConfirmModal';
+import { RulesSheet } from './RulesSheet';
 
 /** "Who won?" — only ACTIVE players are listed; 2+ selected = tie split. Awarding needs a second confirm. */
 export function ShowdownModal({ pot, active, onAward, onClose }: { pot: number; active: Player[]; onAward: (ids: string[]) => void; onClose: () => void }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [rules, setRules] = useState(false);
   const toggle = (id: string) => setPicked((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const winners = active.filter((p) => picked.includes(p.userId));
@@ -27,7 +29,10 @@ export function ShowdownModal({ pot, active, onAward, onClose }: { pot: number; 
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
           <div className="flex items-baseline justify-between">
             <h2 className="display text-3xl font-bold">Who won?</h2>
-            <span className="display text-2xl font-bold text-neon tabular-nums">{rupees(pot)}</span>
+            <span className="flex items-center gap-2">
+              <span className="display text-2xl font-bold text-neon tabular-nums">{rupees(pot)}</span>
+              <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full bg-surface-2 font-bold text-neon">?</button>
+            </span>
           </div>
           <ul className="my-4 flex flex-col gap-2">
             {active.map((p) => {
@@ -59,6 +64,7 @@ export function ShowdownModal({ pot, active, onAward, onClose }: { pot: number; 
           </div>
         </div>
       </div>
+      {rules && <RulesSheet onClose={() => setRules(false)} />}
       {confirming && (
         <ConfirmModal
           title={winners.length === 1 ? `Award ${rupees(pot)} to ${names}?` : `Split ${rupees(pot)} between ${names}?`}
