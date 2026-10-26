@@ -6,7 +6,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { RulesSheet } from './RulesSheet';
 
 /** "Who won?" — only ACTIVE players are listed; 2+ selected = tie split. Awarding needs a second confirm. */
-export function ShowdownModal({ pot, active, onAward, onClose }: { pot: number; active: Player[]; onAward: (ids: string[]) => void; onClose: () => void }) {
+export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: number; topUp: number; active: Player[]; onAward: (ids: string[]) => void; onClose: () => void }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [rules, setRules] = useState(false);
@@ -51,6 +51,7 @@ export function ShowdownModal({ pot, active, onAward, onClose }: { pot: number; 
               );
             })}
           </ul>
+          {topUp > 0 && <p className="-mt-2 mb-2 text-center text-xs text-mid">Includes {rupees(topUp)} from players matching the current bet</p>}
           <p className="mb-3 min-h-5 text-center text-sm text-mid" aria-live="polite">{preview}</p>
           <div className="flex gap-3">
             <button onClick={onClose} className="h-14 basis-1/3 rounded-2xl bg-surface-2 font-semibold">Cancel</button>

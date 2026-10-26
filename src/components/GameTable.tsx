@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { betCost, showdownPot } from '../../shared/engine';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
 import { roundWinners, type Winner } from '../lib/roundResult';
 import { useWakeLock } from '../lib/useWakeLock';
@@ -102,15 +103,17 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         )
       ) : (
         <>
+          <p className="text-center text-xs text-mid">Current bet <b className="text-white">{rupees(state.currentBet)}</b></p>
           <p className="text-center text-sm font-semibold" aria-live="polite">
             {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
           </p>
-          <ActionBar canAct={myTurn} baseBet={state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} />
+          <ActionBar canAct={myTurn} level={state.currentBet + state.baseBet} cost={me ? betCost(state, me) : state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} />
         </>
       )}
       {showdown && state.phase === 'BETTING' && (
         <ShowdownModal
-          pot={state.pot}
+          pot={showdownPot(state)}
+          topUp={showdownPot(state) - state.pot}
           active={active}
           onAward={(ids) => { send({ t: 'AWARD_POT', winnerIds: ids }); setShowdown(false); }}
           onClose={() => setShowdown(false)}

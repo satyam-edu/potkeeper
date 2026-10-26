@@ -17,6 +17,7 @@ export interface RoomState {
   sessionId: string; // minted at first START_ROUND; settle idempotency key
   hostId: string;
   baseBet: number;
+  currentBet: number; // the table's stake level this round; each BET raises it by baseBet. 0 outside BETTING
   phase: Phase;
   players: Player[];
   pot: number;

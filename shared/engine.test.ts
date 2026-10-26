@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRoom, reduce, checkInvariant, splitPot, type Action } from './engine';
+import { createRoom, reduce, checkInvariant, splitPot, betCost, showdownPot, type Action } from './engine';
 import type { RoomState } from './types';
 
 const ids = ['p1', 'p2', 'p3', 'p4'];
@@ -60,6 +60,51 @@ describe('bet & turn order', () => {
   });
 });
 
+describe('rising stake (user scenario, base ₹1, 4 players)', () => {
+  it('each BET raises the level by baseBet and the bettor pays up to it; show matches the level', () => {
+    let s = started(4, 1); // everyone in at 1, pot 4
+    const bets = ['p1', 'p2', 'p3', 'p4'];
+    const expectIn = [2, 3, 4, 5];
+    bets.forEach((id, i) => {
+      s = run(s, { type: 'BET' }, id);
+      expect(s.players[i]!.roundBet).toBe(expectIn[i]);
+    });
+    expect(s.pot).toBe(2 + 3 + 4 + 5);
+    s = run(s, { type: 'PACK' }, 'p1'); // out at 2
+    s = run(s, { type: 'PACK' }, 'p2'); // out at 3
+    for (const [id, level] of [['p3', 6], ['p4', 7], ['p3', 8], ['p4', 9]] as const) {
+      s = run(s, { type: 'BET' }, id);
+      expect(s.currentBet).toBe(level);
+    }
+    expect(s.pot).toBe(2 + 3 + 8 + 9);
+    // p3 "shows" at 9 without raising: the showdown matches p3 up to the level
+    s = run(s, { type: 'AWARD_POT', winnerIds: ['p4'] }, 'p3');
+    expect(bal(s)).toEqual({ p1: -2, p2: -3, p3: -9, p4: 14 }); // winner gets everyone else's money
+    expect(s.pot).toBe(0);
+    expect(s.currentBet).toBe(0);
+  });
+  it('bet label cost: first bet costs baseBet, later bets cost the gap to the new level', () => {
+    const s = started(3, 5);
+    expect(betCost(s, s.players[0]!)).toBe(5);
+    const s2 = run(run(s, { type: 'BET' }, 'p1'), { type: 'BET' }, 'p2');
+    expect(betCost(s2, s2.players[2]!)).toBe(15); // raising to 20 while p3 is in at 5
+    expect(showdownPot(s2)).toBe(s2.pot + 5 + 10); // p1 (10→15) and p3 (5→15) top up; p2 already at 15
+  });
+  it('undo restores the stake level', () => {
+    const s0 = started(3, 5);
+    const s1 = run(s0, { type: 'BET' }, 'p1');
+    expect(s1.currentBet).toBe(10);
+    expect(run(s1, { type: 'UNDO' }, 'p1').currentBet).toBe(5);
+  });
+  it('mid-round End Game still refunds everything after raises', () => {
+    let s = started(3, 5);
+    s = run(s, { type: 'BET' }, 'p1');
+    s = run(s, { type: 'BET' }, 'p2');
+    s = run(s, { type: 'END_GAME' }, 'p1');
+    expect(bal(s)).toEqual({ p1: 0, p2: 0, p3: 0 });
+  });
+});
+
 describe('pack & auto-win', () => {
   it('last ACTIVE wins the whole pot automatically', () => {
     let s = started(3);
@@ -79,13 +124,13 @@ describe('award pot', () => {
     s = run(s, { type: 'BET' }, 'p3');
     s = run(s, { type: 'BET' }, 'p2');
     s = run(s, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p3');
-    expect(bal(s)).toEqual({ p1: -1, p2: -3, p3: 4 }); // pot 6, p3 put in 2
+    expect(bal(s)).toEqual({ p1: -1, p2: -4, p3: 5 }); // stake rose to 4; p3 matched it at the show
   });
   it('single winner takes all', () => {
     let s = started(3);
     s = run(s, { type: 'BET' }, 'p1');
     s = run(s, { type: 'AWARD_POT', winnerIds: ['p2'] }, 'p3');
-    expect(bal(s)).toEqual({ p1: -10, p2: 15, p3: -5 });
+    expect(bal(s)).toEqual({ p1: -10, p2: 20, p3: -10 }); // p2/p3 match the ₹10 stake at the show
   });
   it('splits with integer division; remainder carries', () => {
     let s = started(3, 5); // pot 15
