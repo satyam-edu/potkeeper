@@ -20,6 +20,16 @@ export type Action =
 
 export type Result = { ok: true; state: RoomState } | { ok: false; error: EngineError };
 
+/** Integer split of a pot between k winners; the remainder carries to the next round. */
+export function splitPot(pot: number, k: number): { share: number; remainder: number } {
+  const share = Math.floor(pot / k);
+  return { share, remainder: pot - share * k };
+}
+
+/** At a showdown every player still in matches the current bet first; this is the pot that gets split. */
+export const showdownPot = (s: RoomState) =>
+  s.pot + s.players.filter((p) => p.status === 'ACTIVE').reduce((n, p) => n + (s.currentBet - p.roundBet), 0);
+
 const ok = (state: RoomState): Result => ({ ok: true, state });
 const err = (error: EngineError): Result => ({ ok: false, error });
 
@@ -29,6 +39,7 @@ export function createRoom(code: string, hostId: string, hostName: string, baseB
     sessionId: '',
     hostId,
     baseBet,
+    currentBet: 0,
     phase: 'LOBBY',
     players: [newPlayer(hostId, hostName, 0, 'ACTIVE')],
     pot: 0,
@@ -71,7 +82,7 @@ function apply(s: RoomState, a: Action, actorId: string): Result {
       if (s.phase !== 'BETTING') return err('WRONG_PHASE');
       const actor = s.players.find((p) => p.userId === actorId);
       if (!isHost && actor?.status !== 'ACTIVE') return err('NOT_ALLOWED');
-      const r = award(s, a.winnerIds);
+      const r = award(matchBets(s), a.winnerIds);
       return r.ok ? ok(withHistory(s, r.state)) : r;
     }
     case 'TRANSFER_HOST': {
@@ -151,6 +162,7 @@ function startRound(s: RoomState, sessionId: string): Result {
     phase: 'BETTING',
     sessionId: s.sessionId || sessionId,
     pot: s.carryOverPot + liveCount(s) * s.baseBet,
+    currentBet: s.baseBet,
     carryOverPot: 0,
     roundNumber: s.roundNumber + 1,
   };
@@ -158,13 +170,20 @@ function startRound(s: RoomState, sessionId: string): Result {
   return ok(withHistory(s, { ...next, startIndex: start, currentTurnIndex: start }));
 }
 
+/** BET raises the table's stake by baseBet; the bettor pays up to the new level (their total in = the new level). */
+export const betCost = (s: RoomState, p: Player) => s.currentBet + s.baseBet - p.roundBet;
+
 function bet(s: RoomState, actorId: string): Result {
   const i = turnCheck(s, actorId);
   if (typeof i !== 'number') return i;
-  const players = s.players.map((p, idx) =>
-    idx === i ? { ...p, sessionBalance: p.sessionBalance - s.baseBet, roundBet: p.roundBet + s.baseBet } : p,
-  );
-  return ok(withHistory(s, { ...s, players, pot: s.pot + s.baseBet, currentTurnIndex: nextActive(players, i) }));
+  const level = s.currentBet + s.baseBet;
+  let cost = 0;
+  const players = s.players.map((p, idx) => {
+    if (idx !== i) return p;
+    cost = level - p.roundBet;
+    return { ...p, sessionBalance: p.sessionBalance - cost, roundBet: level };
+  });
+  return ok(withHistory(s, { ...s, players, pot: s.pot + cost, currentBet: level, currentTurnIndex: nextActive(players, i) }));
 }
 
 function pack(s: RoomState, actorId: string): Result {
@@ -193,6 +212,18 @@ function turnCheck(s: RoomState, actorId: string): number | Result {
   return s.currentTurnIndex;
 }
 
+/** Showdown: every ACTIVE player pays up to the current bet (the show costs what the last bet cost). */
+function matchBets(s: RoomState): RoomState {
+  let pot = s.pot;
+  const players = s.players.map((p) => {
+    if (p.status !== 'ACTIVE') return p;
+    const due = s.currentBet - p.roundBet;
+    pot += due;
+    return { ...p, sessionBalance: p.sessionBalance - due, roundBet: s.currentBet };
+  });
+  return { ...s, players, pot };
+}
+
 /** Splits the pot among winners (all must be ACTIVE). Callers add history. */
 function award(s: RoomState, winnerIds: string[]): Result {
   const ids = new Set(winnerIds);
@@ -200,7 +231,7 @@ function award(s: RoomState, winnerIds: string[]): Result {
   const winners = s.players.filter((p) => ids.has(p.userId));
   if (winners.length !== ids.size) return err('NOT_FOUND');
   if (winners.some((p) => p.status !== 'ACTIVE')) return err('NOT_ACTIVE');
-  const share = Math.floor(s.pot / ids.size);
+  const { share, remainder } = splitPot(s.pot, ids.size);
   const players = s.players.map((p) => ({
     ...p,
     sessionBalance: p.sessionBalance + (ids.has(p.userId) ? share : 0),
@@ -209,8 +240,9 @@ function award(s: RoomState, winnerIds: string[]): Result {
   return ok({
     ...s,
     players,
-    carryOverPot: s.pot - share * ids.size,
+    carryOverPot: remainder,
     pot: 0,
+    currentBet: 0,
     phase: 'BETWEEN_ROUNDS',
     currentTurnIndex: -1,
   });
@@ -229,6 +261,7 @@ function undo(s: RoomState): Result {
     phase: prev.phase,
     pot: prev.pot,
     carryOverPot: prev.carryOverPot,
+    currentBet: prev.currentBet,
     currentTurnIndex: prev.currentTurnIndex,
     startIndex: prev.startIndex,
     roundNumber: prev.roundNumber,
@@ -248,7 +281,7 @@ function endGame(s: RoomState): Result {
     sessionBalance: p.sessionBalance + p.roundBet + (p.userId === s.hostId ? leftover : 0),
     roundBet: 0,
   }));
-  return ok({ ...s, players, pot: 0, carryOverPot: 0, phase: 'ENDED', currentTurnIndex: -1, historyStack: [] });
+  return ok({ ...s, players, pot: 0, carryOverPot: 0, currentBet: 0, phase: 'ENDED', currentTurnIndex: -1, historyStack: [] });
 }
 
 function reorder(s: RoomState, order: string[]): Result {

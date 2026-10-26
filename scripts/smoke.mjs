@@ -69,4 +69,17 @@ b2.send({ t: 'JOIN', token: b2.token, name: 'Ayush' });
 const st = (await back).state;
 assert(st.players.length === 2 && st.players[1].connected, 'reconnect resumes the seat');
 console.log('OK  reconnect resumed the same seat');
+
+// host transfer, then mid-round End Game refunds every roundBet
+const moved = b2.next((m) => m.t === 'STATE' && m.state.hostId === 'u2');
+a.send({ t: 'TRANSFER_HOST', toUserId: 'u2' });
+await moved;
+const noHost = a.next((m) => m.t === 'ERROR');
+a.send({ t: 'END_GAME' });
+assert((await noHost).code === 'NOT_HOST', 'old host cannot end the game');
+const ended = b2.next((m) => m.t === 'STATE' && m.state.phase === 'ENDED');
+b2.send({ t: 'END_GAME' });
+const fin = (await ended).state;
+assert(fin.players.every((p) => p.sessionBalance === 0) && fin.pot === 0, 'mid-round End Game refunds all bets');
+console.log('OK  host transfer + mid-round End Game refunded everyone');
 process.exit(0);

@@ -1,6 +1,7 @@
 import type * as Party from 'partykit/server';
 import { createRoom, reduce, type Action } from '../shared/engine';
 import { verifyJwt } from '../shared/jwt';
+import { toAction } from '../shared/messages';
 import { simplifyDebts } from '../shared/settle';
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../shared/types';
 
@@ -59,27 +60,11 @@ export default class Room implements Party.Server {
   private dispatch(msg: ClientMessage, conn: Party.Connection) {
     const userId = this.users.get(conn.id);
     if (!userId || !this.state) return this.fail(conn, 'NOT_JOINED');
-    const action = this.toAction(msg);
+    const action = toAction(msg, crypto.randomUUID());
     if (!action) return this.fail(conn, 'BAD_MESSAGE');
     const r = this.commit(action, userId);
     if (!r.ok) return this.fail(conn, r.error);
     if (action.type === 'END_GAME') this.broadcastSettlement();
-  }
-
-  private toAction(msg: ClientMessage): Action | null {
-    switch (msg.t) {
-      case 'START_ROUND': return { type: 'START_ROUND', sessionId: crypto.randomUUID() };
-      case 'BET': return { type: 'BET' };
-      case 'PACK': return { type: 'PACK' };
-      case 'UNDO': return { type: 'UNDO' };
-      case 'END_GAME': return { type: 'END_GAME' };
-      case 'AWARD_POT': return Array.isArray(msg.winnerIds) ? { type: 'AWARD_POT', winnerIds: msg.winnerIds.map(String) } : null;
-      case 'TRANSFER_HOST': return { type: 'TRANSFER_HOST', toUserId: String(msg.toUserId) };
-      case 'REORDER': return Array.isArray(msg.order) ? { type: 'REORDER', order: msg.order.map(String) } : null;
-      case 'SET_BASE_BET': return { type: 'SET_BASE_BET', baseBet: msg.baseBet };
-      case 'REMOVE_PLAYER': return { type: 'REMOVE_PLAYER', userId: String(msg.userId) };
-      default: return null;
-    }
   }
 
   /** Apply an action through the shared engine; broadcast on success. */
