@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "mongoose": "^9.11.4",
     "partysocket": "^1.3.0",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
