@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { ClientMessage, RoomState } from '../../shared/types';
+import type { ClientMessage, Player, RoomState } from '../../shared/types';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../../shared/engine';
+import { ConfirmModal } from './ConfirmModal';
 
 const PRESETS = [1, 5, 10, 20];
 
@@ -10,6 +11,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
   const link = `${location.origin}/room/${state.code}`;
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<Player | null>(null);
 
   const copy = async () => {
     try {
@@ -89,6 +91,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
                 <span className="flex gap-1">
                   <button aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▲</button>
                   <button aria-label={`Move ${p.name} down`} disabled={i === live.length - 1} onClick={() => move(i, 1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▼</button>
+                  {p.userId !== meId && <button aria-label={`Remove ${p.name}`} onClick={() => setRemoving(p)} className="h-10 w-10 rounded-lg bg-danger font-bold">✕</button>}
                 </span>
               )}
             </li>
@@ -106,6 +109,16 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
         </button>
       ) : (
         <p className="py-4 text-center text-mid">Waiting for the host to start…</p>
+      )}
+      {removing && (
+        <ConfirmModal
+          tone="danger"
+          title={`Remove ${removing.name}?`}
+          body="They'll be taken out of this room and can't rejoin it."
+          confirmLabel="Remove"
+          onConfirm={() => { send({ t: 'REMOVE_PLAYER', userId: removing.userId }); setRemoving(null); }}
+          onCancel={() => setRemoving(null)}
+        />
       )}
     </div>
   );

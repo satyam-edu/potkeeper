@@ -44,6 +44,16 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   }
   if (!state) return <p className="m-auto text-mid">Connecting…</p>;
 
+  if (state.players.find((p) => p.userId === session.userId)?.cashedOut) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+        <p className="display text-3xl font-bold">You were cashed out</p>
+        <p className="text-mid">The host removed you from this room.</p>
+        <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
+      </div>
+    );
+  }
+
   return (
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
