@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
+import { roundWinners, type Winner } from '../lib/roundResult';
+import { useWakeLock } from '../lib/useWakeLock';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
 import { ActionBar } from './ActionBar';
@@ -8,10 +10,22 @@ import { GameOver } from './GameOver';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
 import { SeatCard } from './SeatCard';
+import { RulesSheet } from './RulesSheet';
 import { ShowdownModal } from './ShowdownModal';
 
 export function GameTable({ state, meId, send }: { state: RoomState; meId: string; send: (m: ClientMessage) => void }) {
+  useWakeLock();
   const [showdown, setShowdown] = useState(false);
+  const [rules, setRules] = useState(false);
+  const [result, setResult] = useState<Winner[] | null>(null);
+  const prev = useRef<RoomState | null>(null);
+  // Remember who just won so the table can celebrate until the next round starts.
+  useEffect(() => {
+    const w = prev.current ? roundWinners(prev.current, state) : [];
+    if (w.length) setResult(w);
+    else if (state.phase !== 'BETWEEN_ROUNDS') setResult(null);
+    prev.current = state;
+  }, [state]);
   const [sheet, setSheet] = useState<Player | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'end' } | { kind: 'remove' | 'transfer'; p: Player } | null>(null);
   const isHost = state.hostId === meId;
@@ -25,6 +39,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const seats = fromViewer(state.players, meId);
   const seat = (p: (typeof seats)[number]) => (
     <SeatCard
+      won={!!result?.some((w) => w.userId === p.userId)}
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
   );
@@ -43,12 +58,13 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           <span className="rounded-full bg-neon px-2.5 py-0.5 text-xs font-extrabold text-ink">₹{state.baseBet}</span>
           <span className="text-xs font-semibold text-mid">R{state.roundNumber}</span>
         </div>
-        {isHost && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full bg-surface-2 font-bold text-neon">?</button>
+          {isHost && (<>
             <button disabled={state.historyStack.length === 0} onClick={() => send({ t: 'UNDO' })} className="h-9 rounded-full bg-surface-2 px-4 text-sm font-bold disabled:opacity-40">↶ Undo</button>
             <button onClick={() => setConfirm({ kind: 'end' })} className="h-9 rounded-full bg-danger px-4 text-sm font-bold">End</button>
-          </div>
-        )}
+          </>)}
+        </div>
       </header>
 
       {seats.length <= ELLIPSE_MAX ? (
@@ -71,6 +87,11 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       )}
 
+      {state.phase === 'BETWEEN_ROUNDS' && result && (
+        <p className="rounded-2xl bg-neon px-4 py-2 text-center font-bold text-ink" aria-live="polite">
+          ★ {result.map((w) => w.name).join(' & ')} won {rupees(result.reduce((n, w) => n + w.gain, 0))}
+        </p>
+      )}
       {state.phase === 'BETWEEN_ROUNDS' ? (
         isHost ? (
           <button onClick={() => send({ t: 'START_ROUND' })} className="display h-16 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none">
@@ -95,6 +116,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           onClose={() => setShowdown(false)}
         />
       )}
+      {rules && <RulesSheet onClose={() => setRules(false)} />}
       {sheet && (
         <PlayerSheet
           p={sheet}

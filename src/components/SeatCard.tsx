@@ -1,7 +1,7 @@
 import type { Player } from '../../shared/types';
 import { hue, initials, rupees, signed } from '../lib/format';
 
-export function SeatCard({ p, isTurn, isMe, isHost, onClick }: { p: Player; isTurn: boolean; isMe: boolean; isHost: boolean; onClick?: () => void }) {
+export function SeatCard({ p, isTurn, isMe, isHost, won, onClick }: { p: Player; isTurn: boolean; isMe: boolean; isHost: boolean; won?: boolean; onClick?: () => void }) {
   const Tag = onClick ? 'button' : 'div';
   const out = p.cashedOut || p.status === 'PACKED';
   const waiting = p.status === 'WAITING' && !p.cashedOut;
@@ -11,6 +11,7 @@ export function SeatCard({ p, isTurn, isMe, isHost, onClick }: { p: Player; isTu
       className={[
         'flex w-[84px] flex-col items-center gap-0.5 rounded-[20px] border px-1.5 py-2 text-center transition-all',
         isTurn ? 'border-neon bg-surface shadow-[0_0_18px_rgba(198,255,0,.45)] animate-pulse' : 'border-line bg-surface',
+        won ? 'border-neon bg-neon/15' : '',
         waiting ? 'border-dashed' : '',
         out ? 'opacity-40 grayscale' : '',
       ].join(' ')}
