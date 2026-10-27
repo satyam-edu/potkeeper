@@ -1,4 +1,4 @@
-import { signJwt } from '../../shared/jwt';
+import { signJwt, verifyJwt, type JwtPayload } from '../../shared/jwt';
 
 export const TOKEN_DAYS = 90;
 export const NAME_MAX = 24;
@@ -18,3 +18,10 @@ export function issueToken(userId: string, name: string): Promise<string> {
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+
+/** Claims from an `Authorization: Bearer <token>` header, or null. Signature check only — no DB. */
+export function bearerClaims(request: Request): Promise<JwtPayload | null> {
+  const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
+  const secret = process.env.JWT_SECRET;
+  return token && secret ? verifyJwt(token, secret) : Promise.resolve(null);
+}
