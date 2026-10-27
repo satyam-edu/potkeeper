@@ -1,4 +1,7 @@
+import mongoose from 'mongoose';
 import { signJwt, verifyJwt, type JwtPayload } from '../../shared/jwt';
+import { connectDb } from './db';
+import { User } from './models';
 
 export const TOKEN_DAYS = 90;
 export const NAME_MAX = 24;
@@ -24,4 +27,13 @@ export function bearerClaims(request: Request): Promise<JwtPayload | null> {
   const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
   const secret = process.env.JWT_SECRET;
   return token && secret ? verifyJwt(token, secret) : Promise.resolve(null);
+}
+
+/** The signed-in user's doc, or null if the token is bad, the user is gone, or the guest was merged away (must sign in with Google). */
+export async function currentUser(request: Request) {
+  const claims = await bearerClaims(request);
+  if (!claims || !mongoose.isValidObjectId(claims.sub)) return null;
+  await connectDb();
+  const u = await User.findById(claims.sub);
+  return !u || u.mergedInto ? null : u;
 }
