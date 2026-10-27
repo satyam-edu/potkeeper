@@ -1,6 +1,6 @@
-// HMAC-SHA256 hex signature for the PartyKit → /api/games/settle call. WebCrypto: runs in Node and Workers.
+// HMAC-SHA256 hex signature for the room server → /api/games/settle call. WebCrypto: runs in Node and Workers.
 const enc = new TextEncoder();
-const key = (secret: string, use: KeyUsage) =>
+const key = (secret: string, use: 'sign' | 'verify') =>
   crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [use]);
 
 export async function signBody(body: string, secret: string): Promise<string> {

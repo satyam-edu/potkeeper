@@ -1,11 +1,11 @@
-// HS256 JWT via WebCrypto — runs in Node (Vercel), Cloudflare Workers (PartyKit) and browsers. No DB, no deps.
+// HS256 JWT via WebCrypto — runs in Node (Vercel), Cloudflare Workers (room server) and browsers. No DB, no deps.
 const enc = new TextEncoder();
 const b64 = (b: ArrayBuffer | string) => {
   const bytes = typeof b === 'string' ? enc.encode(b) : new Uint8Array(b);
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 const unb64 = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-const key = (secret: string, use: KeyUsage) =>
+const key = (secret: string, use: 'sign' | 'verify') =>
   crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [use]);
 
 export interface JwtPayload {

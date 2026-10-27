@@ -3,7 +3,7 @@ import { json } from '../_lib/auth';
 import { connectDb } from '../_lib/db';
 import { applySettle, parseSettle } from '../_lib/settle';
 
-/** POST /api/games/settle — PartyKit only. `X-Signature` = HMAC-SHA256(SETTLE_SECRET, raw body). */
+/** POST /api/games/settle (room server only). `X-Signature` = HMAC-SHA256(SETTLE_SECRET, raw body). */
 export async function POST(request: Request): Promise<Response> {
   const secret = process.env.SETTLE_SECRET;
   if (!secret) return json({ error: 'SERVER_ERROR' }, 500);
@@ -20,6 +20,6 @@ export async function POST(request: Request): Promise<Response> {
     return json({ ok: true, ...(await applySettle(payload)) });
   } catch (e) {
     console.error('settle failed', e);
-    return json({ error: 'SERVER_ERROR' }, 500); // PartyKit retries
+    return json({ error: 'SERVER_ERROR' }, 500); // the room server retries
   }
 }
