@@ -49,6 +49,30 @@ export function parseSettle(raw: unknown): SettlePayload | null {
   };
 }
 
+const MAX_HOPS = 5;
+
+/**
+ * A room keeps the userId it started with. If that guest merged into a Google account meanwhile, credit the
+ * account they merged into (follows chains). Players that end up as the same user are folded into one entry.
+ */
+async function resolveMerged(players: SettlePlayer[], session: mongoose.ClientSession): Promise<SettlePlayer[]> {
+  const target = new Map(players.map((p) => [p.userId, p.userId]));
+  for (let hop = 0; hop < MAX_HOPS; hop++) {
+    const ids = [...new Set(target.values())];
+    const tombs = await User.find({ _id: { $in: ids }, mergedInto: { $exists: true } }, { mergedInto: 1 }, { session }).lean();
+    if (!tombs.length) break;
+    const next = new Map(tombs.map((t) => [String(t._id), String(t.mergedInto)]));
+    for (const [from, to] of target) target.set(from, next.get(to) ?? to);
+  }
+  const out = new Map<string, SettlePlayer>();
+  for (const p of players) {
+    const userId = target.get(p.userId)!;
+    const seen = out.get(userId);
+    out.set(userId, seen ? { ...seen, net: seen.net + p.net, cashedOut: seen.cashedOut && p.cashedOut } : { ...p, userId });
+  }
+  return [...out.values()];
+}
+
 /**
  * Save the game and credit every wallet in ONE transaction.
  * Idempotent on sessionId: a repeat returns { duplicate: true } and touches no wallet.
@@ -58,15 +82,17 @@ export async function applySettle(p: SettlePayload): Promise<{ duplicate: boolea
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
+      // inside the transaction, so a merge that commits at the same moment can't slip between lookup and credit
+      const players = await resolveMerged(p.players, session);
       await GameSession.create(
-        [{ ...p, startedAt: p.startedAt && new Date(p.startedAt), endedAt: new Date(p.endedAt) }],
+        [{ ...p, players, startedAt: p.startedAt && new Date(p.startedAt), endedAt: new Date(p.endedAt) }],
         { session },
       );
       const res = await User.bulkWrite(
-        p.players.map((x) => ({ updateOne: { filter: { _id: x.userId }, update: { $inc: { walletBalance: x.net } } } })),
+        players.map((x) => ({ updateOne: { filter: { _id: x.userId }, update: { $inc: { walletBalance: x.net } } } })),
         { session },
       );
-      if (res.matchedCount !== p.players.length) console.warn('settle: some players have no user doc', p.sessionId);
+      if (res.matchedCount !== players.length) console.warn('settle: some players have no user doc', p.sessionId);
     });
     return { duplicate: false };
   } catch (e) {
