@@ -5,7 +5,7 @@ import { toAction } from '../../shared/messages';
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../../shared/types';
 import type { Session } from './session';
 
-const HOST = import.meta.env.VITE_PARTYKIT_HOST ?? 'localhost:1999';
+const HOST = import.meta.env.VITE_ROOM_HOST ?? 'localhost:1999';
 
 // Messages whose result we predict locally with the same engine the server runs.
 const OPTIMISTIC = new Set<ClientMessage['t']>(['BET', 'PACK', 'AWARD_POT', 'REORDER', 'SET_BASE_BET']);

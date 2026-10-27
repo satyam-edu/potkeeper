@@ -1,9 +1,11 @@
-// Local smoke test for the PartyKit room: two clients, create → join → start → bet → latency.
-// Run: npx partykit dev --var JWT_SECRET=dev   (other shell)   node scripts/smoke.mjs
+// Smoke test for the room server (PartyServer on Cloudflare): two clients, create → join → start → bet → latency.
+// Run: npm run dev:party   (other shell)   JWT_SECRET=<value from .dev.vars> node scripts/smoke.mjs
+// Deployed: JWT_SECRET=<prod secret> PARTY_HOST=potkeeper.<account>.workers.dev node scripts/smoke.mjs
 import { createHmac } from 'node:crypto';
 
 const SECRET = process.env.JWT_SECRET ?? 'dev';
 const HOST = process.env.PARTY_HOST ?? 'localhost:1999';
+const WS = HOST.startsWith('localhost') ? 'ws' : 'wss'; // deployed hosts need TLS
 const b64 = (o) => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');
 const token = (sub, name) => {
   const body = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub, name, exp: Math.floor(Date.now() / 1000) + 600 })}`;
@@ -12,7 +14,7 @@ const token = (sub, name) => {
 const room = String(1000 + Math.floor(Math.random() * 9000));
 
 function client(id, name) {
-  const ws = new WebSocket(`ws://${HOST}/parties/main/${room}`);
+  const ws = new WebSocket(`${WS}://${HOST}/parties/main/${room}`);
   const c = { ws, last: null, waiters: [] };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);

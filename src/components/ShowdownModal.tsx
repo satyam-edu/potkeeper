@@ -16,7 +16,7 @@ export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: n
   const { share, remainder } = splitPot(pot, Math.max(winners.length, 1));
   const preview =
     winners.length === 0
-      ? 'Select the winner — or several for a tie'
+      ? 'Select the winner, or several for a tie'
       : winners.length === 1
         ? `${winners[0]!.name} takes ${rupees(pot)}`
         : `${rupees(share)} each${remainder ? `, ${rupees(remainder)} carries to the next round` : ''}`;

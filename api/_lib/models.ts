@@ -18,7 +18,7 @@ export const User = (mongoose.models.User ?? mongoose.model('User', UserSchema))
 
 const GameSessionSchema = new Schema(
   {
-    sessionId: { type: String, required: true, unique: true }, // idempotency key from PartyKit
+    sessionId: { type: String, required: true, unique: true }, // idempotency key from the room server
     roomCode: String,
     baseBet: { type: Number, required: true },
     rounds: { type: Number, required: true },

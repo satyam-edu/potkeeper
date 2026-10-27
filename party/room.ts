@@ -1,4 +1,4 @@
-import type * as Party from 'partykit/server';
+import { Server, type Connection, type WSMessage } from 'partyserver';
 import { createRoom, reduce, type Action } from '../shared/engine';
 import { verifyJwt } from '../shared/jwt';
 import { toAction } from '../shared/messages';
@@ -10,15 +10,13 @@ const MAX_MESSAGE_BYTES = 2048;
 const NAME_MAX = 24;
 
 // Room state lives in RAM only — zero DB access during a session.
-export default class Room implements Party.Server {
+export class Room extends Server<Cloudflare.Env> {
   state: RoomState | null = null;
   users = new Map<string, string>(); // connection id → userId
   saveStatus?: 'saved' | 'failed'; // told to anyone who joins after End Game
   startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
-  constructor(readonly room: Party.Room) {}
-
-  onMessage(raw: string | ArrayBuffer, sender: Party.Connection) {
+  onMessage(sender: Connection, raw: WSMessage) {
     if (typeof raw !== 'string' || raw.length > MAX_MESSAGE_BYTES) return this.fail(sender, 'BAD_MESSAGE');
     let msg: ClientMessage;
     try {
@@ -30,7 +28,7 @@ export default class Room implements Party.Server {
     return msg.t === 'JOIN' ? this.join(msg, sender) : this.dispatch(msg, sender);
   }
 
-  onClose(conn: Party.Connection) {
+  onClose(conn: Connection) {
     const userId = this.users.get(conn.id);
     this.users.delete(conn.id);
     // Only mark offline when the user's last socket is gone (multi-tab / quick reconnect).
@@ -38,8 +36,8 @@ export default class Room implements Party.Server {
     this.commit({ type: 'SET_CONNECTED', connected: false }, userId);
   }
 
-  private async join(msg: Extract<ClientMessage, { t: 'JOIN' }>, conn: Party.Connection) {
-    const secret = this.room.env.JWT_SECRET;
+  private async join(msg: Extract<ClientMessage, { t: 'JOIN' }>, conn: Connection) {
+    const secret = this.env.JWT_SECRET;
     const claims = typeof secret === 'string' ? await verifyJwt(String(msg.token), secret) : null;
     if (!claims) return this.fail(conn, 'BAD_TOKEN');
     const name = String(msg.name ?? claims.name).trim().slice(0, NAME_MAX) || claims.name;
@@ -48,7 +46,7 @@ export default class Room implements Party.Server {
       if (this.state) return this.fail(conn, 'ROOM_EXISTS'); // 4-digit code collision: client picks another
       const baseBet = msg.create.baseBet;
       if (!Number.isInteger(baseBet) || baseBet < 1) return this.fail(conn, 'BAD_MESSAGE');
-      this.state = createRoom(this.room.id, claims.sub, name, baseBet);
+      this.state = createRoom(this.name, claims.sub, name, baseBet);
       this.users.set(conn.id, claims.sub);
       return this.broadcastState();
     }
@@ -61,7 +59,7 @@ export default class Room implements Party.Server {
     if (this.saveStatus) conn.send(JSON.stringify({ t: 'SAVE', status: this.saveStatus } satisfies ServerMessage));
   }
 
-  private dispatch(msg: ClientMessage, conn: Party.Connection) {
+  private dispatch(msg: ClientMessage, conn: Connection) {
     const userId = this.users.get(conn.id);
     if (!userId || !this.state) return this.fail(conn, 'NOT_JOINED');
     const action = toAction(msg, crypto.randomUUID());
@@ -77,7 +75,7 @@ export default class Room implements Party.Server {
 
   /** The room's only DB touchpoint. Persist first so a restart or an API outage can't lose the result. */
   private async saveGame(payload: SettlePayload) {
-    await this.room.storage.put('pending', { payload, attempts: 0 });
+    await this.ctx.storage.put('pending', { payload, attempts: 0 });
     await this.trySettle();
   }
 
@@ -87,23 +85,23 @@ export default class Room implements Party.Server {
   }
 
   private async trySettle() {
-    const pending = await this.room.storage.get<{ payload: SettlePayload; attempts: number }>('pending');
+    const pending = await this.ctx.storage.get<{ payload: SettlePayload; attempts: number }>('pending');
     if (!pending) return;
-    const { SETTLE_URL: url, SETTLE_SECRET: secret } = this.room.env;
+    const { SETTLE_URL: url, SETTLE_SECRET: secret } = this.env;
     if (typeof url !== 'string' || typeof secret !== 'string') {
-      return console.error('settle: SETTLE_URL / SETTLE_SECRET not set — result kept in storage, not saved', pending.payload.sessionId);
+      return console.error('settle: SETTLE_URL / SETTLE_SECRET not set, result kept in storage and not saved', pending.payload.sessionId);
     }
     const outcome = await postSettle(pending.payload, url, secret);
     if (outcome === 'saved') {
-      await this.room.storage.delete('pending');
+      await this.ctx.storage.delete('pending');
       return this.announceSave('saved');
     }
     if (outcome === 'rejected' || pending.attempts + 1 >= MAX_ATTEMPTS) {
       this.announceSave('failed');
       return console.error(`settle: giving up (${outcome})`, pending.payload.sessionId); // payload stays in storage for manual replay
     }
-    await this.room.storage.put('pending', { ...pending, attempts: pending.attempts + 1 });
-    await this.room.storage.setAlarm(Date.now() + backoffMs(pending.attempts));
+    await this.ctx.storage.put('pending', { ...pending, attempts: pending.attempts + 1 });
+    await this.ctx.storage.setAlarm(Date.now() + backoffMs(pending.attempts));
   }
 
   /** Apply an action through the shared engine; broadcast on success. */
@@ -117,7 +115,7 @@ export default class Room implements Party.Server {
   }
 
   private broadcastState() {
-    if (this.state) this.room.broadcast(JSON.stringify({ t: 'STATE', state: this.state } satisfies ServerMessage));
+    if (this.state) this.broadcast(JSON.stringify({ t: 'STATE', state: this.state } satisfies ServerMessage));
   }
 
   private broadcastSettlement() {
@@ -128,15 +126,15 @@ export default class Room implements Party.Server {
       leaderboard: s.players.map((p) => ({ userId: p.userId, name: p.name, net: p.sessionBalance })).sort((a, b) => b.net - a.net),
       payments: simplifyDebts(nets),
     };
-    this.room.broadcast(JSON.stringify(msg));
+    this.broadcast(JSON.stringify(msg));
   }
 
   private announceSave(status: 'saved' | 'failed') {
     this.saveStatus = status;
-    this.room.broadcast(JSON.stringify({ t: 'SAVE', status } satisfies ServerMessage));
+    this.broadcast(JSON.stringify({ t: 'SAVE', status } satisfies ServerMessage));
   }
 
-  private fail(conn: Party.Connection, code: ErrorCode) {
+  private fail(conn: Connection, code: ErrorCode) {
     conn.send(JSON.stringify({ t: 'ERROR', code } satisfies ServerMessage));
   }
 }
