@@ -2,13 +2,15 @@ export interface Session {
   userId: string;
   name: string;
   token: string;
+  isGuest: boolean;
 }
 
 const KEY = 'pk_session';
 
 export function loadSession(): Session | null {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? 'null') as Session | null;
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as (Omit<Session, 'isGuest'> & { isGuest?: boolean }) | null;
+    return s && { ...s, isGuest: s.isGuest !== false }; // sessions saved before Google login existed are guests
   } catch {
     return null;
   }
@@ -32,7 +34,18 @@ export async function guestLogin(name: string): Promise<Session> {
   });
   if (!res.ok) throw new Error(res.status === 400 ? 'Please enter a name' : "Couldn't sign you in, try again");
   const { token, user } = (await res.json()) as { token: string; user: { id: string; name: string } };
-  const s = { userId: user.id, name: user.name, token };
+  const s = { userId: user.id, name: user.name, token, isGuest: true };
   saveSession(s);
   return s;
+}
+
+/** Ask the server who we are. `false` = the account is gone/merged/invalid (sign out); `null` = couldn't reach it (keep going). */
+export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number } | false | null> {
+  try {
+    const res = await fetch('/api/me', { headers: { authorization: `Bearer ${s.token}` } });
+    if (res.status === 401) return false;
+    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number }) : null;
+  } catch {
+    return null;
+  }
 }
