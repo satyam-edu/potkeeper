@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { GuestSheet } from '../components/GuestSheet';
 import { Hero } from '../components/Hero';
+import { History } from '../components/History';
+import { WalletCard } from '../components/WalletCard';
 import { checkSession, loadSession, saveSession, type Session } from '../lib/session';
 import { Landing } from './Landing';
 
@@ -11,6 +13,7 @@ export function Home() {
   const [, go] = useLocation();
   const [session, setSession] = useState<Session | null>(loadSession);
   const [code, setCode] = useState('');
+  const [wallet, setWallet] = useState<number | null>(null);
   const dismissed = () => { try { return sessionStorage.getItem('pk_google_later') === '1'; } catch { return false; } };
   const [sheet, setSheet] = useState(() => !dismissed()); // shown once per browser session unless Google is connected
   const later = () => {
@@ -22,6 +25,7 @@ export function Home() {
   useEffect(() => {
     if (!session) return;
     void checkSession(session).then((me) => {
+      if (me) setWallet(me.walletBalance);
       if (me === false) { saveSession(null); setSession(null); }
       else if (me && (me.isGuest !== session.isGuest || me.name !== session.name)) {
         const next = { ...session, isGuest: me.isGuest, name: me.name };
@@ -42,11 +46,7 @@ export function Home() {
           not you?
         </button>
       </p>
-      {session.isGuest && (
-        <button onClick={() => setSheet(true)} className="mx-auto rounded-full bg-surface-2 px-4 py-1.5 text-xs font-semibold text-mid">
-          Guest mode · <span className="text-neon">Tap to sync Google</span>
-        </button>
-      )}
+      <WalletCard balance={wallet} isGuest={session.isGuest} onSync={() => setSheet(true)} />
       <button
         onClick={() => go(`/room/${newCode()}?create=5`)}
         className="display h-16 rounded-2xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none"
@@ -65,6 +65,7 @@ export function Home() {
           Join
         </button>
       </form>
+      <History session={session} />
       {session.isGuest && sheet && <GuestSheet onDone={(s) => { setSession(s); setSheet(false); }} onLater={later} />}
     </div>
   );

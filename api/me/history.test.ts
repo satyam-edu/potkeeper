@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { issueToken } from '../_lib/auth';
 import { connectDb } from '../_lib/db';
 import { GameSession, User } from '../_lib/models';
+import { applySettle } from '../_lib/settle';
 import { GET } from './history';
 
 try { process.loadEnvFile('.env'); } catch { /* no .env: live tests are skipped */ }
@@ -40,6 +41,18 @@ describe.skipIf(!live)('GET /api/me/history (live Mongo)', () => {
     expect(p2.games.map((g: { net: number }) => g.net)).toEqual([10]);
     expect(p2.next).toBeNull();
     expect((await get(me!, '?before=junk')).status).toBe(400);
+  });
+
+  it('wallet equals the sum of history nets after settled games', async () => {
+    const [me, a] = await User.create([{ name: 'Sum' }, { name: 'Other' }]);
+    const settle = (sessionId: string, net: number) => applySettle({
+      sessionId, roomCode: '1', baseBet: 5, rounds: 1, endedAt: new Date().toISOString(),
+      players: [{ userId: String(me!._id), name: 'Sum', net, cashedOut: false }, { userId: String(a!._id), name: 'Other', net: -net, cashedOut: false }],
+    });
+    await settle('w1', 14); await settle('w2', -6); await settle('w3', 3);
+    const { games } = await (await get(me!)).json();
+    expect(games.reduce((n: number, g: { net: number }) => n + g.net, 0)).toBe(11);
+    expect((await User.findById(me!._id))!.walletBalance).toBe(11);
   });
 
   it('merged guests are refused', async () => {
