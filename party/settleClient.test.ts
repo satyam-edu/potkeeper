@@ -5,7 +5,7 @@ import { backoffMs, buildPayload, postSettle } from './settleClient';
 
 const payload = () => {
   const s = createRoom('4829', 'u1', 'Sid', 5);
-  return buildPayload({ ...s, sessionId: 'sess-1' }, 3, '2026-10-28T10:00:00.000Z');
+  return buildPayload({ ...s, sessionId: 'sess-1', roundNumber: 3 }, '2026-10-28T10:00:00.000Z');
 };
 const reply = (status: number) => (async () => new Response('{}', { status })) as unknown as typeof fetch;
 

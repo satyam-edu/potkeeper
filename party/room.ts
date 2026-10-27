@@ -13,6 +13,7 @@ const NAME_MAX = 24;
 export default class Room implements Party.Server {
   state: RoomState | null = null;
   users = new Map<string, string>(); // connection id → userId
+  saveStatus?: 'saved' | 'failed'; // told to anyone who joins after End Game
   startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
   constructor(readonly room: Party.Room) {}
@@ -57,6 +58,7 @@ export default class Room implements Party.Server {
     this.state = r.state;
     this.users.set(conn.id, claims.sub);
     this.broadcastState();
+    if (this.saveStatus) conn.send(JSON.stringify({ t: 'SAVE', status: this.saveStatus } satisfies ServerMessage));
   }
 
   private dispatch(msg: ClientMessage, conn: Party.Connection) {
@@ -64,13 +66,12 @@ export default class Room implements Party.Server {
     if (!userId || !this.state) return this.fail(conn, 'NOT_JOINED');
     const action = toAction(msg, crypto.randomUUID());
     if (!action) return this.fail(conn, 'BAD_MESSAGE');
-    const midRound = this.state.phase === 'BETTING'; // End Game refunds an unfinished round, so it doesn't count
     const r = this.commit(action, userId);
     if (!r.ok) return this.fail(conn, r.error);
     if (action.type === 'START_ROUND') this.startedAt ??= new Date().toISOString();
     if (action.type === 'END_GAME') {
       this.broadcastSettlement();
-      return this.saveGame(buildPayload(this.state!, this.state!.roundNumber - (midRound ? 1 : 0), this.startedAt));
+      return this.saveGame(buildPayload(this.state!, this.startedAt));
     }
   }
 
@@ -95,9 +96,10 @@ export default class Room implements Party.Server {
     const outcome = await postSettle(pending.payload, url, secret);
     if (outcome === 'saved') {
       await this.room.storage.delete('pending');
-      return;
+      return this.announceSave('saved');
     }
     if (outcome === 'rejected' || pending.attempts + 1 >= MAX_ATTEMPTS) {
+      this.announceSave('failed');
       return console.error(`settle: giving up (${outcome})`, pending.payload.sessionId); // payload stays in storage for manual replay
     }
     await this.room.storage.put('pending', { ...pending, attempts: pending.attempts + 1 });
@@ -127,6 +129,11 @@ export default class Room implements Party.Server {
       payments: simplifyDebts(nets),
     };
     this.room.broadcast(JSON.stringify(msg));
+  }
+
+  private announceSave(status: 'saved' | 'failed') {
+    this.saveStatus = status;
+    this.room.broadcast(JSON.stringify({ t: 'SAVE', status } satisfies ServerMessage));
   }
 
   private fail(conn: Party.Connection, code: ErrorCode) {

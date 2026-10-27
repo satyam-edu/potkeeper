@@ -252,6 +252,7 @@ describe('end game', () => {
     expect(s.phase).toBe('ENDED');
     expect(bal(s)).toEqual({ p1: 0, p2: 0, p3: 0 });
     expect(s.pot).toBe(0);
+    expect(s.roundNumber).toBe(0); // the refunded round doesn't count
   });
   it('between rounds: leftover carry goes to the Host', () => {
     let s = started(3);
@@ -260,6 +261,7 @@ describe('end game', () => {
     s = run(s, { type: 'END_GAME' }, 'p1');
     expect(bal(s)).toEqual({ p1: -4, p2: 2, p3: 2 });
     expect(s.carryOverPot).toBe(0);
+    expect(s.roundNumber).toBe(1);
   });
   it('mid-round with carry rolled in: refund bets, carry → Host', () => {
     let s = started(3);

@@ -12,13 +12,12 @@ export interface SettlePayload {
   players: { userId: string; name: string; net: number; cashedOut: boolean }[];
 }
 
-/** `rounds` counts finished rounds only — an unfinished one was refunded by End Game. */
-export function buildPayload(s: RoomState, rounds: number, startedAt?: string): SettlePayload {
+export function buildPayload(s: RoomState, startedAt?: string): SettlePayload {
   return {
     sessionId: s.sessionId,
     roomCode: s.code,
     baseBet: s.baseBet,
-    rounds,
+    rounds: s.roundNumber, // finished rounds only: End Game already dropped an unfinished one
     startedAt,
     endedAt: new Date().toISOString(),
     players: s.players.map((p) => ({ userId: p.userId, name: p.name, net: p.sessionBalance, cashedOut: p.cashedOut })),

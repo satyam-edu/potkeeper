@@ -7,7 +7,6 @@ import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
 import { ActionBar } from './ActionBar';
 import { ConfirmModal } from './ConfirmModal';
-import { GameOver } from './GameOver';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
 import { SeatCard } from './SeatCard';
@@ -48,8 +47,6 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const canAward = state.phase === 'BETTING' && (isHost || me?.status === 'ACTIVE');
   const active = state.players.filter((p) => p.status === 'ACTIVE');
   const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
-
-  if (state.phase === 'ENDED') return <GameOver state={state} />;
 
   return (
     <div className="flex flex-1 flex-col gap-3">
