@@ -78,8 +78,14 @@ const noHost = a.next((m) => m.t === 'ERROR');
 a.send({ t: 'END_GAME' });
 assert((await noHost).code === 'NOT_HOST', 'old host cannot end the game');
 const ended = b2.next((m) => m.t === 'STATE' && m.state.phase === 'ENDED');
+const saved = b2.next((m) => m.t === 'SAVE'); // only arrives if SETTLE_URL/SETTLE_SECRET point at a live API
 b2.send({ t: 'END_GAME' });
 const fin = (await ended).state;
 assert(fin.players.every((p) => p.sessionBalance === 0) && fin.pot === 0, 'mid-round End Game refunds all bets');
 console.log('OK  host transfer + mid-round End Game refunded everyone');
+if (process.env.EXPECT_SAVE) {
+  const m = await Promise.race([saved, new Promise((r) => setTimeout(() => r(null), 20000))]);
+  assert(m?.status === 'saved', 'SAVE saved broadcast after settle');
+  console.log('OK  SAVE saved broadcast');
+}
 process.exit(0);

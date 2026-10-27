@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { GameOver } from '../components/GameOver';
 import { GameTable } from '../components/GameTable';
 import { Lobby } from '../components/Lobby';
 import { NamePrompt } from '../components/NamePrompt';
@@ -26,7 +27,7 @@ export function RoomPage({ code }: { code: string }) {
 function Connected({ code, session, onBadToken }: { code: string; session: Session; onBadToken: () => void }) {
   const [, go] = useLocation();
   const create = Number(new URLSearchParams(useSearch()).get('create')) || undefined;
-  const { state, online, error, send } = useRoom(code, session, create);
+  const { state, online, error, save, send } = useRoom(code, session, create);
 
   useEffect(() => {
     if (error?.code === 'ROOM_EXISTS') go(`/room/${newCode()}?create=${create ?? 5}`, { replace: true }); // 4-digit collision
@@ -58,7 +59,9 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
       {!online && <p className="mb-2 rounded-lg bg-neon/15 py-1 text-center text-sm text-neon">Reconnecting…</p>}
-      {state.phase === 'LOBBY' ? (
+      {state.phase === 'ENDED' ? (
+        <GameOver state={state} save={save} onHome={() => go('/')} />
+      ) : state.phase === 'LOBBY' ? (
         <Lobby state={state} meId={session.userId} send={send} />
       ) : (
         <GameTable state={state} meId={session.userId} send={send} />

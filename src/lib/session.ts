@@ -49,3 +49,19 @@ export async function checkSession(s: Session): Promise<{ name: string; isGuest:
     return null;
   }
 }
+
+export interface HistoryGame {
+  id: string;
+  endedAt: string;
+  rounds: number;
+  baseBet: number;
+  net: number;
+  players: { name: string; net: number; isMe: boolean }[];
+}
+
+/** One page of finished games, newest first. Throws if the server can't be reached. */
+export async function fetchHistory(s: Session, before?: string): Promise<{ games: HistoryGame[]; next: string | null }> {
+  const res = await fetch(`/api/me/history${before ? `?before=${encodeURIComponent(before)}` : ''}`, { headers: { authorization: `Bearer ${s.token}` } });
+  if (!res.ok) throw new Error(String(res.status));
+  return (await res.json()) as { games: HistoryGame[]; next: string | null };
+}

@@ -21,12 +21,14 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
   const [optimistic, setOptimistic] = useState<RoomState | null>(null);
   const [error, setError] = useState<RoomError | null>(null);
   const [online, setOnline] = useState(false);
+  const [save, setSave] = useState<'saving' | 'saved' | 'failed'>('saving'); // wallet update after End Game
   const sock = useRef<PartySocket | null>(null);
   const view = useRef<RoomState | null>(null);
   const joined = useRef(false);
 
   useEffect(() => {
     joined.current = false;
+    setSave('saving');
     const ws = new PartySocket({ host: HOST, room: code });
     sock.current = ws;
 
@@ -44,6 +46,8 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
         view.current = m.state;
         setServer(m.state);
         setOptimistic(null);
+      } else if (m.t === 'SAVE') {
+        setSave(m.status);
       } else if (m.t === 'ERROR') {
         view.current = null;
         setOptimistic(null); // roll back any prediction
@@ -77,5 +81,5 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
     [session.userId],
   );
 
-  return { state: optimistic ?? server, online, error, send };
+  return { state: optimistic ?? server, online, error, save, send };
 }

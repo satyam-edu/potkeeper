@@ -3,6 +3,7 @@ import { createRoom, reduce, type Action } from '../shared/engine';
 import { verifyJwt } from '../shared/jwt';
 import { toAction } from '../shared/messages';
 import { simplifyDebts } from '../shared/settle';
+import { MAX_ATTEMPTS, backoffMs, buildPayload, postSettle, type SettlePayload } from './settleClient';
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../shared/types';
 
 const MAX_MESSAGE_BYTES = 2048;
@@ -12,6 +13,8 @@ const NAME_MAX = 24;
 export default class Room implements Party.Server {
   state: RoomState | null = null;
   users = new Map<string, string>(); // connection id → userId
+  saveStatus?: 'saved' | 'failed'; // told to anyone who joins after End Game
+  startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
   constructor(readonly room: Party.Room) {}
 
@@ -55,6 +58,7 @@ export default class Room implements Party.Server {
     this.state = r.state;
     this.users.set(conn.id, claims.sub);
     this.broadcastState();
+    if (this.saveStatus) conn.send(JSON.stringify({ t: 'SAVE', status: this.saveStatus } satisfies ServerMessage));
   }
 
   private dispatch(msg: ClientMessage, conn: Party.Connection) {
@@ -64,7 +68,42 @@ export default class Room implements Party.Server {
     if (!action) return this.fail(conn, 'BAD_MESSAGE');
     const r = this.commit(action, userId);
     if (!r.ok) return this.fail(conn, r.error);
-    if (action.type === 'END_GAME') this.broadcastSettlement();
+    if (action.type === 'START_ROUND') this.startedAt ??= new Date().toISOString();
+    if (action.type === 'END_GAME') {
+      this.broadcastSettlement();
+      return this.saveGame(buildPayload(this.state!, this.startedAt));
+    }
+  }
+
+  /** The room's only DB touchpoint. Persist first so a restart or an API outage can't lose the result. */
+  private async saveGame(payload: SettlePayload) {
+    await this.room.storage.put('pending', { payload, attempts: 0 });
+    await this.trySettle();
+  }
+
+  /** Alarm = retry after a failed attempt (also wakes a room that was evicted in between). */
+  onAlarm() {
+    return this.trySettle();
+  }
+
+  private async trySettle() {
+    const pending = await this.room.storage.get<{ payload: SettlePayload; attempts: number }>('pending');
+    if (!pending) return;
+    const { SETTLE_URL: url, SETTLE_SECRET: secret } = this.room.env;
+    if (typeof url !== 'string' || typeof secret !== 'string') {
+      return console.error('settle: SETTLE_URL / SETTLE_SECRET not set — result kept in storage, not saved', pending.payload.sessionId);
+    }
+    const outcome = await postSettle(pending.payload, url, secret);
+    if (outcome === 'saved') {
+      await this.room.storage.delete('pending');
+      return this.announceSave('saved');
+    }
+    if (outcome === 'rejected' || pending.attempts + 1 >= MAX_ATTEMPTS) {
+      this.announceSave('failed');
+      return console.error(`settle: giving up (${outcome})`, pending.payload.sessionId); // payload stays in storage for manual replay
+    }
+    await this.room.storage.put('pending', { ...pending, attempts: pending.attempts + 1 });
+    await this.room.storage.setAlarm(Date.now() + backoffMs(pending.attempts));
   }
 
   /** Apply an action through the shared engine; broadcast on success. */
@@ -90,7 +129,11 @@ export default class Room implements Party.Server {
       payments: simplifyDebts(nets),
     };
     this.room.broadcast(JSON.stringify(msg));
-    // TODO(P4-03): POST the signed payload to /api/games/settle
+  }
+
+  private announceSave(status: 'saved' | 'failed') {
+    this.saveStatus = status;
+    this.room.broadcast(JSON.stringify({ t: 'SAVE', status } satisfies ServerMessage));
   }
 
   private fail(conn: Party.Connection, code: ErrorCode) {

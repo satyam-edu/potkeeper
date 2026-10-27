@@ -47,6 +47,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { t: 'STATE'; state: RoomState }
   | { t: 'SETTLEMENT'; leaderboard: { userId: string; name: string; net: number }[]; payments: Payment[] }
+  | { t: 'SAVE'; status: 'saved' | 'failed' } // outcome of the End Game wallet update
   | { t: 'ERROR'; code: ErrorCode; message?: string };
 
 export interface Payment {

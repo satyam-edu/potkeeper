@@ -281,7 +281,7 @@ function endGame(s: RoomState): Result {
     sessionBalance: p.sessionBalance + p.roundBet + (p.userId === s.hostId ? leftover : 0),
     roundBet: 0,
   }));
-  return ok({ ...s, players, pot: 0, carryOverPot: 0, currentBet: 0, phase: 'ENDED', currentTurnIndex: -1, historyStack: [] });
+  return ok({ ...s, players, pot: 0, carryOverPot: 0, currentBet: 0, phase: 'ENDED', currentTurnIndex: -1, historyStack: [], roundNumber: s.roundNumber - (s.phase === 'BETTING' ? 1 : 0) }); // a refunded round doesn't count
 }
 
 function reorder(s: RoomState, order: string[]): Result {
