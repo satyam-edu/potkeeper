@@ -91,7 +91,7 @@ export default class Room implements Party.Server {
     if (!pending) return;
     const { SETTLE_URL: url, SETTLE_SECRET: secret } = this.room.env;
     if (typeof url !== 'string' || typeof secret !== 'string') {
-      return console.error('settle: SETTLE_URL / SETTLE_SECRET not set — result kept in storage, not saved', pending.payload.sessionId);
+      return console.error('settle: SETTLE_URL / SETTLE_SECRET not set, result kept in storage and not saved', pending.payload.sessionId);
     }
     const outcome = await postSettle(pending.payload, url, secret);
     if (outcome === 'saved') {

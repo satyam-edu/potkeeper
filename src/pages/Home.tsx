@@ -58,7 +58,7 @@ export function Home() {
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
           inputMode="numeric"
-          placeholder="4-digit code"
+          placeholder="Room code"
           className="h-14 min-w-0 flex-1 rounded-xl bg-surface px-4 text-lg tabular-nums outline-none ring-neon focus:ring-2"
         />
         <button disabled={code.length !== 4} className="h-14 rounded-xl bg-surface-2 px-6 font-extrabold disabled:opacity-40">

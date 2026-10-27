@@ -6,7 +6,7 @@ export function WalletCard({ balance, isGuest, onSync }: { balance: number | nul
     <section aria-label="Lifetime wallet" className="rounded-[28px] bg-surface p-5 text-center">
       <p className="text-xs font-semibold tracking-widest text-mid">LIFETIME WALLET</p>
       <p className={`display my-1 text-6xl font-bold leading-none tabular-nums ${balance === null ? 'text-mid' : balance < 0 ? 'text-danger' : 'text-neon'}`}>
-        {balance === null ? '—' : signed(balance)}
+        {balance === null ? '…' : signed(balance)}
       </p>
       {isGuest && (
         <button onClick={onSync} className="mt-3 rounded-full bg-surface-2 px-4 py-1.5 text-xs font-semibold text-mid">

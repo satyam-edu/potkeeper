@@ -21,7 +21,7 @@ export function loadGis(): Promise<void> {
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Could not load Google sign-in'));
+    s.onerror = () => reject(new Error('Could not load Google login'));
     document.head.appendChild(s);
   });
   return loading;
