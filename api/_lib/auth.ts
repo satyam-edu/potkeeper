@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import { signJwt, verifyJwt, type JwtPayload } from '../../shared/jwt';
-import { connectDb } from './db';
-import { User } from './models';
+import { signJwt, verifyJwt, type JwtPayload } from '../../shared/jwt.js';
+import { connectDb } from './db.js';
+import { User } from './models.js';
 
 export const TOKEN_DAYS = 90;
 export const NAME_MAX = 24;

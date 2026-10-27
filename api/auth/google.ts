@@ -1,8 +1,8 @@
 import { OAuth2Client } from 'google-auth-library';
-import { verifyJwt } from '../../shared/jwt';
-import { signInWithGoogle } from '../_lib/accounts';
-import { issueToken, json } from '../_lib/auth';
-import { connectDb } from '../_lib/db';
+import { verifyJwt } from '../../shared/jwt.js';
+import { signInWithGoogle } from '../_lib/accounts.js';
+import { issueToken, json } from '../_lib/auth.js';
+import { connectDb } from '../_lib/db.js';
 
 /** POST /api/auth/google  { idToken, guestToken? } → { token, user } */
 export async function POST(request: Request): Promise<Response> {
