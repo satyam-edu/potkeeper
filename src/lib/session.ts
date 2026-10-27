@@ -1,16 +1,16 @@
-import { signJwt } from '../../shared/jwt';
-
 export interface Session {
   userId: string;
   name: string;
   token: string;
+  isGuest: boolean;
 }
 
 const KEY = 'pk_session';
 
 export function loadSession(): Session | null {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? 'null') as Session | null;
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as (Omit<Session, 'isGuest'> & { isGuest?: boolean }) | null;
+    return s && { ...s, isGuest: s.isGuest !== false }; // sessions saved before Google login existed are guests
   } catch {
     return null;
   }
@@ -25,17 +25,27 @@ export function saveSession(s: Session | null) {
   }
 }
 
-/**
- * DEV-ONLY login: signs a token in the browser so the room server accepts us.
- * Replaced by POST /api/auth/guest in P3-02 — never ships to production.
- */
-export async function devLogin(name: string): Promise<Session> {
-  if (!import.meta.env.DEV) throw new Error('Login is not available yet');
-  const old = loadSession();
-  const userId = old?.userId ?? crypto.randomUUID();
-  const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-  const token = await signJwt({ sub: userId, name, exp }, import.meta.env.VITE_DEV_JWT_SECRET ?? 'dev');
-  const s = { userId, name, token };
+/** Create an anonymous guest account (isGuest: true) and remember it on this device. */
+export async function guestLogin(name: string): Promise<Session> {
+  const res = await fetch('/api/auth/guest', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(res.status === 400 ? 'Please enter a name' : "Couldn't sign you in, try again");
+  const { token, user } = (await res.json()) as { token: string; user: { id: string; name: string } };
+  const s = { userId: user.id, name: user.name, token, isGuest: true };
   saveSession(s);
   return s;
+}
+
+/** Ask the server who we are. `false` = the account is gone/merged/invalid (sign out); `null` = couldn't reach it (keep going). */
+export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number } | false | null> {
+  try {
+    const res = await fetch('/api/me', { headers: { authorization: `Bearer ${s.token}` } });
+    if (res.status === 401) return false;
+    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number }) : null;
+  } catch {
+    return null;
+  }
 }

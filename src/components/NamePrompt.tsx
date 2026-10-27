@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { devLogin, type Session } from '../lib/session';
+import { guestLogin, type Session } from '../lib/session';
 
-/** Temporary name-only entry. Replaced by the real Landing page (guest / Google) in Phase 3. */
+/** Name-only guest entry. The Google option joins it on the Landing page (P3-03). */
 export function NamePrompt({ onDone, label = 'Continue' }: { onDone: (s: Session) => void; label?: string }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -9,7 +9,7 @@ export function NamePrompt({ onDone, label = 'Continue' }: { onDone: (s: Session
   const go = async () => {
     setBusy(true);
     try {
-      onDone(await devLogin(name.trim()));
+      onDone(await guestLogin(name.trim()));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Something went wrong');
       setBusy(false);
