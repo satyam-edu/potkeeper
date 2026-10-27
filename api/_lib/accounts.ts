@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { GameSession, User } from './models';
+import { GameSession, User } from './models.js';
 
 export interface GoogleProfile {
   googleId: string;

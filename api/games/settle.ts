@@ -1,7 +1,7 @@
-import { verifyBody } from '../../shared/hmac';
-import { json } from '../_lib/auth';
-import { connectDb } from '../_lib/db';
-import { applySettle, parseSettle } from '../_lib/settle';
+import { verifyBody } from '../../shared/hmac.js';
+import { json } from '../_lib/auth.js';
+import { connectDb } from '../_lib/db.js';
+import { applySettle, parseSettle } from '../_lib/settle.js';
 
 /** POST /api/games/settle (room server only). `X-Signature` = HMAC-SHA256(SETTLE_SECRET, raw body). */
 export async function POST(request: Request): Promise<Response> {

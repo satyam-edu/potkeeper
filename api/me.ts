@@ -1,4 +1,4 @@
-import { currentUser, json } from './_lib/auth';
+import { currentUser, json } from './_lib/auth.js';
 
 /** GET /api/me → the signed-in user's profile and wallet. 401 if the token is bad or the account was merged away. */
 export async function GET(request: Request): Promise<Response> {

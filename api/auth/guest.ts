@@ -1,6 +1,6 @@
-import { cleanName, issueToken, json } from '../_lib/auth';
-import { connectDb } from '../_lib/db';
-import { User } from '../_lib/models';
+import { cleanName, issueToken, json } from '../_lib/auth.js';
+import { connectDb } from '../_lib/db.js';
+import { User } from '../_lib/models.js';
 
 /** POST /api/auth/guest  { name } → { token, user } */
 export async function POST(request: Request): Promise<Response> {

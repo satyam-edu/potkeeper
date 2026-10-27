@@ -1,5 +1,5 @@
-import { currentUser, json } from '../_lib/auth';
-import { GameSession } from '../_lib/models';
+import { currentUser, json } from '../_lib/auth.js';
+import { GameSession } from '../_lib/models.js';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
