@@ -304,3 +304,45 @@ describe('zero-sum under random play', () => {
 });
 
 const turnOrHost = (s: RoomState) => s.players[s.currentTurnIndex]?.userId ?? s.hostId;
+
+describe('resume after End Game', () => {
+  const ended = () => {
+    let s = started(3, 5);
+    s = run(s, { type: 'BET' }, 'p1');
+    s = run(s, { type: 'AWARD_POT', winnerIds: ['p1'] }, 'p1');
+    return run(s, { type: 'END_GAME' }, 'p1');
+  };
+  it('only the host, only after End Game', () => {
+    const e = ended();
+    expect(code(e, { type: 'REOPEN_GAME' }, 'p2')).toBe('NOT_HOST');
+    expect(code(e, { type: 'NEW_GAME' }, 'p2')).toBe('NOT_HOST');
+    const live = started(3, 5);
+    expect(code(live, { type: 'REOPEN_GAME' }, 'p1')).toBe('WRONG_PHASE');
+    expect(code(live, { type: 'NEW_GAME' }, 'p1')).toBe('WRONG_PHASE');
+  });
+  it('reopen keeps totals, remembers what was saved, and the next round starts a fresh session', () => {
+    const e = ended();
+    const r = run(e, { type: 'REOPEN_GAME' }, 'p1');
+    expect(r.phase).toBe('BETWEEN_ROUNDS');
+    expect(bal(r)).toEqual(bal(e));
+    expect(r.settledBalances).toEqual(bal(e));
+    expect(r.settledRounds).toBe(e.roundNumber);
+    expect(r.sessionId).toBe('');
+    const next = run(r, { type: 'START_ROUND', sessionId: 'sess2' }, 'p1');
+    expect(next.sessionId).toBe('sess2');
+    expect(next.roundNumber).toBe(e.roundNumber + 1);
+  });
+  it('new game zeroes everything, keeps the room, drops cashed out players', () => {
+    let s = started(3, 5);
+    s = run(s, { type: 'REMOVE_PLAYER', userId: 'p3' }, 'p1');
+    const e = run(s, { type: 'END_GAME' }, 'p1');
+    const n = run(e, { type: 'NEW_GAME' }, 'p1');
+    expect(n.phase).toBe('LOBBY');
+    expect(n.players.map((p) => p.userId)).toEqual(['p1', 'p2']);
+    expect(n.players.map((p) => p.seat)).toEqual([0, 1]);
+    expect(Object.values(bal(n))).toEqual([0, 0]);
+    expect(n.hostId).toBe('p1');
+    expect(n.roundNumber).toBe(0);
+    expect(n.sessionId).toBe('');
+  });
+});

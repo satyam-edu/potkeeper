@@ -36,3 +36,14 @@ describe('postSettle', () => {
     expect([0, 1, 2, 10].map(backoffMs)).toEqual([5000, 10000, 20000, 300000]);
   });
 });
+
+describe('buildPayload after a reopen', () => {
+  it('sends only what changed since the earlier save', () => {
+    const s = createRoom('4829', 'u1', 'Sid', 5);
+    const p = { ...s.players[0]!, sessionBalance: 8 };
+    const q = { ...p, userId: 'u2', name: 'Raj', sessionBalance: -8 };
+    const out = buildPayload({ ...s, players: [p, q], sessionId: 'sess-2', roundNumber: 5, settledRounds: 3, settledBalances: { u1: 10, u2: -10 } });
+    expect(out.rounds).toBe(2);
+    expect(out.players.map((x) => x.net)).toEqual([-2, 2]);
+  });
+});

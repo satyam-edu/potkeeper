@@ -14,6 +14,8 @@ export type Action =
   | { type: 'TRANSFER_HOST'; toUserId: string }
   | { type: 'UNDO' }
   | { type: 'END_GAME' }
+  | { type: 'REOPEN_GAME' }
+  | { type: 'NEW_GAME' }
   | { type: 'REORDER'; order: string[] }
   | { type: 'SET_BASE_BET'; baseBet: number }
   | { type: 'REMOVE_PLAYER'; userId: string };
@@ -47,6 +49,8 @@ export function createRoom(code: string, hostId: string, hostName: string, baseB
     currentTurnIndex: -1,
     startIndex: -1,
     roundNumber: 0,
+    settledBalances: {},
+    settledRounds: 0,
     historyStack: [],
   };
 }
@@ -94,6 +98,8 @@ function apply(s: RoomState, a: Action, actorId: string): Result {
     }
     case 'UNDO': return isHost ? undo(s) : err('NOT_HOST');
     case 'END_GAME': return isHost ? endGame(s) : err('NOT_HOST');
+    case 'REOPEN_GAME': return isHost ? reopen(s) : err('NOT_HOST');
+    case 'NEW_GAME': return isHost ? newGame(s) : err('NOT_HOST');
     case 'REORDER': return isHost ? reorder(s, a.order) : err('NOT_HOST');
     case 'SET_BASE_BET': {
       if (!isHost) return err('NOT_HOST');
@@ -282,6 +288,25 @@ function endGame(s: RoomState): Result {
     roundBet: 0,
   }));
   return ok({ ...s, players, pot: 0, carryOverPot: 0, currentBet: 0, phase: 'ENDED', currentTurnIndex: -1, historyStack: [], roundNumber: s.roundNumber - (s.phase === 'BETTING' ? 1 : 0) }); // a refunded round doesn't count
+}
+
+/** After End Game (and a successful save): keep playing with the same totals. Wallets already hold everything so far, so the next save only sends what changes from here. */
+function reopen(s: RoomState): Result {
+  if (s.phase !== 'ENDED') return err('WRONG_PHASE');
+  const settledBalances = Object.fromEntries(s.players.map((p) => [p.userId, p.sessionBalance]));
+  return ok({ ...s, phase: 'BETWEEN_ROUNDS', sessionId: '', settledBalances, settledRounds: s.roundNumber, historyStack: [] });
+}
+
+/** After End Game (and a successful save): same room and players, everything back to zero. Cashed out players are dropped. */
+function newGame(s: RoomState): Result {
+  if (s.phase !== 'ENDED') return err('WRONG_PHASE');
+  const players = s.players
+    .filter((p) => !p.cashedOut)
+    .map((p, seat): Player => ({ ...p, seat, status: 'ACTIVE', sessionBalance: 0, roundBet: 0 }));
+  return ok({
+    ...s, players, phase: 'LOBBY', sessionId: '', pot: 0, carryOverPot: 0, currentBet: 0, currentTurnIndex: -1, startIndex: -1,
+    roundNumber: 0, settledBalances: {}, settledRounds: 0, historyStack: [],
+  });
 }
 
 function reorder(s: RoomState, order: string[]): Result {

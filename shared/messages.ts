@@ -9,6 +9,8 @@ export function toAction(msg: ClientMessage, sessionId: string): Action | null {
     case 'PACK': return { type: 'PACK' };
     case 'UNDO': return { type: 'UNDO' };
     case 'END_GAME': return { type: 'END_GAME' };
+    case 'REOPEN_GAME': return { type: 'REOPEN_GAME' };
+    case 'NEW_GAME': return { type: 'NEW_GAME' };
     case 'AWARD_POT': return Array.isArray(msg.winnerIds) ? { type: 'AWARD_POT', winnerIds: msg.winnerIds.map(String) } : null;
     case 'TRANSFER_HOST': return { type: 'TRANSFER_HOST', toUserId: String(msg.toUserId) };
     case 'REORDER': return Array.isArray(msg.order) ? { type: 'REORDER', order: msg.order.map(String) } : null;

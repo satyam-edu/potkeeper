@@ -22,11 +22,21 @@ body {
 }
 
 .stage {
-  background: radial-gradient(ellipse at 50% 0%, #1b2400 0%, var(--color-ink) 60%);
+  background: var(--color-ink);
 }
 
 .display {
   font-family: var(--font-display);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+@keyframes blink {
+  50% { opacity: 0.15; }
+}
+.blink {
+  animation: blink 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .blink { animation: none; }
 }

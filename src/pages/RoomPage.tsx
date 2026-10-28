@@ -58,9 +58,9 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   return (
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
-      {!online && <p className="mb-2 rounded-lg bg-neon/15 py-1 text-center text-sm text-neon">Reconnecting…</p>}
+      {!online && <p className="fixed inset-x-0 top-0 z-40 bg-ink py-1 text-center text-sm text-neon">Reconnecting…</p>}
       {state.phase === 'ENDED' ? (
-        <GameOver state={state} save={save} onHome={() => go('/')} />
+        <GameOver state={state} save={save} isHost={state.hostId === session.userId} send={send} onHome={() => go('/')} />
       ) : state.phase === 'LOBBY' ? (
         <Lobby state={state} meId={session.userId} send={send} />
       ) : (

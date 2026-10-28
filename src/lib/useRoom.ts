@@ -43,6 +43,7 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
       const m = JSON.parse(String(e.data)) as ServerMessage;
       if (m.t === 'STATE') {
         joined.current = true;
+        if (m.state.phase !== 'ENDED') setSave('saving'); // the next End Game is a new save
         view.current = m.state;
         setServer(m.state);
         setOptimistic(null);

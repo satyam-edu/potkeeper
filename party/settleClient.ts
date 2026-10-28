@@ -1,7 +1,7 @@
 import { signBody } from '../shared/hmac';
 import type { RoomState } from '../shared/types';
 
-/** What /api/games/settle expects. Built once at End Game and kept unchanged across retries (same sessionId). */
+/** What /api/games/settle expects. Built once at End Game (only what changed since an earlier save of the same room) and kept unchanged across retries (same sessionId). */
 export interface SettlePayload {
   sessionId: string;
   roomCode: string;
@@ -17,10 +17,10 @@ export function buildPayload(s: RoomState, startedAt?: string): SettlePayload {
     sessionId: s.sessionId,
     roomCode: s.code,
     baseBet: s.baseBet,
-    rounds: s.roundNumber, // finished rounds only: End Game already dropped an unfinished one
+    rounds: s.roundNumber - s.settledRounds, // finished rounds only: End Game already dropped an unfinished one
     startedAt,
     endedAt: new Date().toISOString(),
-    players: s.players.map((p) => ({ userId: p.userId, name: p.name, net: p.sessionBalance, cashedOut: p.cashedOut })),
+    players: s.players.map((p) => ({ userId: p.userId, name: p.name, net: p.sessionBalance - (s.settledBalances[p.userId] ?? 0), cashedOut: p.cashedOut })),
   };
 }
 

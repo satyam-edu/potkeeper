@@ -8,6 +8,7 @@ const TEXT: Partial<Record<ErrorCode, string>> = {
   NOT_ENOUGH_PLAYERS: 'Need at least 2 players',
   WRONG_PHASE: "That can't be done right now",
   NOTHING_TO_UNDO: 'Nothing to undo',
+  NOT_SAVED: 'Wait until the game is saved',
 };
 
 export function Toast({ code, id }: { code: ErrorCode | null; id: number }) {
