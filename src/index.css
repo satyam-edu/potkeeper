@@ -11,6 +11,7 @@
   --color-mid: #9a9a9a;
   --color-danger: #ff4d4d;
   --font-display: "Oswald", "Arial Narrow", Impact, sans-serif;
+  --font-amount: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -23,6 +24,11 @@ body {
 
 .stage {
   background: var(--color-ink);
+}
+
+.amount {
+  font-family: var(--font-amount);
+  font-weight: 700;
 }
 
 .display {
