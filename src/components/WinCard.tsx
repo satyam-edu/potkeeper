@@ -9,7 +9,7 @@ const Corner = ({ flip }: { flip?: boolean }) => (
   </span>
 );
 
-/** Round result shaped like an ace card: the winner(s) big and highlighted, everyone else's loss underneath. Shown on every phone. */
+/** Round result shaped like an ace card: the winner(s) big and highlighted, everyone else's loss underneath. Shown on every phone. Blocks the table behind it; a tap anywhere closes it. */
 export function WinCard({ state, winners, onClose }: { state: RoomState; winners: Winner[]; onClose: () => void }) {
   const log = (state.roundLog ?? []).at(-1) ?? {};
   const won = new Set(winners.map((w) => w.userId));
@@ -18,12 +18,12 @@ export function WinCard({ state, winners, onClose }: { state: RoomState; winners
     .map(([id, net]) => ({ id, net, name: state.players.find((p) => p.userId === id)?.name ?? '?' }))
     .sort((a, b) => a.net - b.net);
   return (
-    <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center px-6">
-      <div className="absolute inset-0 bg-ink/75 backdrop-blur-sm" aria-hidden="true" />
+    <div role="dialog" aria-modal="true" aria-label="Round result" className="fixed inset-0 z-30 flex items-center justify-center px-6">
+      <button onClick={onClose} tabIndex={-1} aria-label="Close" className="absolute inset-0 bg-ink/75 backdrop-blur-sm" />
       <button
         onClick={onClose}
         aria-live="polite"
-        className="pop pointer-events-auto relative aspect-[5/7] w-[min(72vw,260px)] rounded-[18px] border border-white bg-white/95 text-center text-ink"
+        className="pop relative aspect-[5/7] w-[min(72vw,260px)] rounded-[18px] border border-white bg-white/95 text-center text-ink"
       >
         <Corner />
         <Corner flip />
