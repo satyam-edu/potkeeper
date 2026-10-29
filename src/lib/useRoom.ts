@@ -5,7 +5,8 @@ import { toAction } from '../../shared/messages';
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../../shared/types';
 import type { Session } from './session';
 
-const HOST = import.meta.env.VITE_ROOM_HOST ?? 'localhost:1999';
+// Dev default follows the page's own address, so a phone on the laptop's IP reaches the laptop's room server.
+const HOST = import.meta.env.VITE_ROOM_HOST ?? `${location.hostname}:1999`;
 
 // Messages whose result we predict locally with the same engine the server runs.
 const OPTIMISTIC = new Set<ClientMessage['t']>(['BET', 'PACK', 'AWARD_POT', 'REORDER', 'SET_BASE_BET']);
@@ -25,6 +26,8 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
   const sock = useRef<PartySocket | null>(null);
   const view = useRef<RoomState | null>(null);
   const joined = useRef(false);
+  const createRef = useRef(createBaseBet);
+  if (createBaseBet) createRef.current = createBaseBet; // kept after `?create` is removed from the URL, so that doesn't reconnect
 
   useEffect(() => {
     joined.current = false;
@@ -35,7 +38,7 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
     ws.addEventListener('open', () => {
       setOnline(true);
       // `create` only on the very first JOIN; reconnects must not try to create again.
-      const create = createBaseBet && !joined.current ? { create: { baseBet: createBaseBet } } : {};
+      const create = createRef.current && !joined.current ? { create: { baseBet: createRef.current } } : {};
       ws.send(JSON.stringify({ t: 'JOIN', token: session.token, name: session.name, ...create }));
     });
     ws.addEventListener('close', () => setOnline(false));
@@ -65,7 +68,7 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
       document.removeEventListener('visibilitychange', onVisible);
       ws.close();
     };
-  }, [code, session.token, session.name, createBaseBet]);
+  }, [code, session.token, session.name]);
 
   const send = useCallback(
     (msg: ClientMessage) => {

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { GameOver } from '../components/GameOver';
 import { GameTable } from '../components/GameTable';
 import { Lobby } from '../components/Lobby';
 import { NamePrompt } from '../components/NamePrompt';
 import { Toast } from '../components/Toast';
 import { loadSession, saveSession, type Session } from '../lib/session';
+import { useBackGuard } from '../lib/useBackGuard';
 import { useRoom } from '../lib/useRoom';
 
 const newCode = () => String(1000 + Math.floor(Math.random() * 9000));
@@ -28,6 +30,17 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   const [, go] = useLocation();
   const create = Number(new URLSearchParams(useSearch()).get('create')) || undefined;
   const { state, online, error, save, send } = useRoom(code, session, create);
+
+  // Back button: mid-game it asks first; on the Game Over or cashed out screens it just goes home.
+  const [leaving, setLeaving] = useState(false);
+  const mine = state?.players.find((p) => p.userId === session.userId);
+  const inGame = !!state && state.phase !== 'ENDED' && !mine?.cashedOut;
+  useBackGuard(!!state, () => (inGame ? setLeaving(true) : go('/')));
+
+  // Once the room exists, drop `?create` so a refresh re-joins this room instead of trying to create it again.
+  useEffect(() => {
+    if (state && create) go(`/room/${code}`, { replace: true });
+  }, [state, create, code, go]);
 
   useEffect(() => {
     if (error?.code === 'ROOM_EXISTS') go(`/room/${newCode()}?create=${create ?? 5}`, { replace: true }); // 4-digit collision
@@ -59,6 +72,22 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
       {!online && <p className="fixed inset-x-0 top-0 z-40 bg-ink py-1 text-center text-sm text-neon">Reconnecting…</p>}
+      {leaving && inGame && (
+        <ConfirmModal
+          tone="danger"
+          title={state.phase === 'LOBBY' ? 'Leave the room?' : 'Leave the game?'}
+          body={
+            state.phase === 'LOBBY'
+              ? 'Going back takes you out of this room. Join again with the room code.'
+              : state.hostId === session.userId
+                ? 'Going back takes you out of the game. You are the host, so nobody can undo, end the game or start the next round until you return. Your seat and balance stay.'
+                : 'Going back takes you out of the game. Your seat and balance stay, but the table waits for you on your turn. Join again with the room code.'
+          }
+          confirmLabel={state.phase === 'LOBBY' ? 'Leave room' : 'Leave game'}
+          onConfirm={() => { setLeaving(false); go('/'); }}
+          onCancel={() => setLeaving(false)}
+        />
+      )}
       {state.phase === 'ENDED' ? (
         <GameOver state={state} save={save} isHost={state.hostId === session.userId} send={send} onHome={() => go('/')} />
       ) : state.phase === 'LOBBY' ? (

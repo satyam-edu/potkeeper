@@ -86,7 +86,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
           {pot}
-          <div className="grid w-full grid-cols-5 gap-1.5">
+          <div className={`grid w-full gap-1.5 ${seats.length > 8 ? 'grid-cols-5' : 'grid-cols-4'}`}>
             {seats.map((p) => (
               <div key={p.userId}>{seat(p, true)}</div>
             ))}
