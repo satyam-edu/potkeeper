@@ -346,3 +346,19 @@ describe('resume after End Game', () => {
     expect(n.sessionId).toBe('');
   });
 });
+
+describe('game total (balance + roundBet) only moves when a round finishes', () => {
+  const totals = (s: RoomState) => Object.fromEntries(s.players.map((p) => [p.userId, p.sessionBalance + p.roundBet]));
+  it('start, bet and pack leave it alone; the award changes it', () => {
+    let s = started(3, 5);
+    const before = totals(s);
+    expect(before).toEqual({ p1: 0, p2: 0, p3: 0 });
+    s = run(s, { type: 'BET' }, 'p1');
+    s = run(s, { type: 'PACK' }, 'p2');
+    expect(totals(s)).toEqual(before);
+    s = run(s, { type: 'AWARD_POT', winnerIds: ['p1'] }, 'p1');
+    expect(totals(s)).toEqual({ p1: 15, p2: -5, p3: -10 }); // pot 30 − own 15 / losers' stakes (p3 matched to 10)
+    s = run(s, { type: 'START_ROUND', sessionId: 'x' }, 'p1');
+    expect(totals(s)).toEqual({ p1: 15, p2: -5, p3: -10 }); // round 2 starting does not move it
+  });
+});

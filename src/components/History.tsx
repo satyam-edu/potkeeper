@@ -3,6 +3,7 @@ import { signed } from '../lib/format';
 import { fetchHistory, type HistoryGame, type Session } from '../lib/session';
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 const tone = (n: number) => (n < 0 ? 'text-danger' : 'text-neon');
 
 /** Past games, newest first. Tap a row to see everyone's result. */
@@ -32,7 +33,7 @@ export function History({ session }: { session: Session }) {
           <li key={g.id} className="rounded-2xl bg-surface">
             <button onClick={() => setOpen(open === g.id ? null : g.id)} aria-expanded={open === g.id} className="flex min-h-14 w-full items-center justify-between px-4 text-left">
               <span>
-                <span className="font-semibold">{day(g.endedAt)}</span>
+                <span className="font-semibold">{day(g.endedAt)}, {time(g.endedAt)}</span>
                 <span className="text-sm text-mid"> · {g.rounds} round{g.rounds === 1 ? '' : 's'} · ₹{g.baseBet} base</span>
               </span>
               <span className={`display text-xl font-bold tabular-nums ${g.net === 0 ? 'text-mid' : tone(g.net)}`}>{signed(g.net)}</span>
