@@ -12,6 +12,7 @@ import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
 import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
+import { WinCard } from './WinCard';
 import { SeatCard } from './SeatCard';
 import { SoundToggle } from './SoundToggle';
 import { RulesSheet } from './RulesSheet';
@@ -34,7 +35,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   }, [state]);
   useEffect(() => {
     if (!winPopup) return;
-    const t = setTimeout(() => setWinPopup(false), 4000);
+    const t = setTimeout(() => setWinPopup(false), 10000);
     return () => clearTimeout(t);
   }, [winPopup]);
   const [sheet, setSheet] = useState<Player | null>(null);
@@ -102,24 +103,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       )}
 
-      {winPopup && state.phase === 'BETWEEN_ROUNDS' && result && (
-        <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center px-8">
-          <div className="absolute inset-0 bg-ink/75 backdrop-blur-sm" aria-hidden="true" />
-          <button
-            onClick={() => setWinPopup(false)}
-            aria-live="polite"
-            className="pop pointer-events-auto flex max-w-full flex-col items-center gap-1 relative rounded-[28px] border border-white bg-white/90 px-8 py-6 text-center text-ink backdrop-blur-xl"
-          >
-            <span className="text-2xl text-neon-dim" aria-hidden="true">★</span>
-            {result.map((w) => (
-              <span key={w.userId} className="flex flex-col items-center leading-tight">
-                <span className="break-words text-2xl font-bold [overflow-wrap:anywhere]">{w.name}</span>
-                <span className="text-4xl font-bold tabular-nums">won {rupees(Math.max(0, (state.roundLog ?? []).at(-1)?.[w.userId] ?? 0))}</span>
-              </span>
-            ))}
-          </button>
-        </div>
-      )}
+      {winPopup && state.phase === 'BETWEEN_ROUNDS' && result && <WinCard state={state} winners={result} onClose={() => setWinPopup(false)} />}
       {state.phase === 'BETWEEN_ROUNDS' ? (
         isHost ? (
           <button onClick={() => send({ t: 'START_ROUND' })} className="display h-16 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none">

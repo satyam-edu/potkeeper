@@ -13,7 +13,7 @@ export function SeatCard({ p, net, fluid, isTurn, isMe, isHost, won, onClick }: 
       onClick={onClick}
       className={[
         `flex ${fluid ? 'w-full px-0.5' : 'w-[84px] px-1.5'} flex-col items-center gap-0.5 rounded-[20px] border-2 py-2 text-center`,
-        isTurn ? 'border-neon bg-surface' : 'border-line bg-surface',
+        isTurn ? 'border-white bg-surface shadow-[0_0_22px_rgba(255,255,255,.45)]' : 'border-line bg-surface',
         won ? 'border-neon bg-neon/15' : '',
         waiting ? 'border-dashed' : '',
         out ? 'opacity-40' : '',
