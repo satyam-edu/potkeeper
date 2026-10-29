@@ -102,7 +102,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
 
       {state.phase === 'BETWEEN_ROUNDS' && result && (
         <p className="rounded-2xl bg-neon px-4 py-2 text-center font-bold text-ink" aria-live="polite">
-          ★ {result.map((w) => w.name).join(' & ')} won {rupees(result.reduce((n, w) => n + w.gain, 0))}
+          ★ {result.map((w) => `${w.name} won ${rupees(Math.max(0, nets?.[w.userId] ?? 0))}`).join(' · ')}
         </p>
       )}
       {state.phase === 'BETWEEN_ROUNDS' ? (
