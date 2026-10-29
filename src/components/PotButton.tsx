@@ -1,17 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { rupees } from '../lib/format';
 
+/** The pot as one poker chip with the amount inside. Tap (host only) opens the showdown. */
 export function PotButton({ pot, carry, onTap }: { pot: number; carry: number; onTap?: () => void }) {
-  // Scale-pulse whenever the pot changes.
-  const [bump, setBump] = useState(false);
-  const last = useRef(pot);
-  useEffect(() => {
-    if (last.current === pot) return;
-    last.current = pot;
-    setBump(true);
-    const t = setTimeout(() => setBump(false), 180);
-    return () => clearTimeout(t);
-  }, [pot]);
+  const amount = rupees(pot);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -19,11 +10,20 @@ export function PotButton({ pot, carry, onTap }: { pot: number; carry: number; o
         disabled={!onTap}
         onClick={onTap}
         aria-live="polite"
-        className={`flex h-[clamp(96px,18dvh,150px)] w-[clamp(96px,18dvh,150px)] flex-col items-center justify-center rounded-full bg-neon text-ink transition-transform ${bump ? 'scale-110' : 'scale-100'} ${onTap ? 'active:scale-95' : ''}`}
+        className={`flex flex-col items-center gap-1 transition-transform ${onTap ? 'active:scale-95' : ''}`}
       >
-        <span className="text-sm font-bold tracking-widest">POT</span>
-        <span className="text-[clamp(1.5rem,5.5dvh,2.75rem)] font-bold leading-none tabular-nums">{rupees(pot)}</span>
-        {onTap && <span className="mt-1 hidden text-[10px] font-semibold uppercase [@media(min-height:700px)]:block">Tap to award</span>}
+        <span
+          className="grid h-[clamp(76px,12dvh,100px)] w-[clamp(76px,12dvh,100px)] place-items-center rounded-full shadow-[0_3px_0_rgba(0,0,0,.45)]"
+          style={{ background: 'repeating-conic-gradient(#f2f2f2 0 22.5deg, #d7263d 22.5deg 45deg)' }}
+        >
+          <span className="grid h-[72%] w-[72%] place-items-center rounded-full border-2 border-dashed border-white/50 bg-ink text-white">
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-[9px] font-bold tracking-widest text-white/70">POT</span>
+              <span className={`mt-0.5 font-bold tabular-nums ${amount.length <= 3 ? 'text-2xl' : amount.length <= 5 ? 'text-xl' : 'text-base'}`}>{amount}</span>
+            </span>
+          </span>
+        </span>
+        {onTap && <span className="rounded-full bg-ink/80 px-2 py-0.5 text-[9px] font-bold uppercase leading-none text-neon">Tap to award</span>}
       </button>
       {carry > 0 && <span className="rounded-full bg-paper px-3 py-0.5 text-xs font-bold text-ink">+{rupees(carry)} carry</span>}
     </div>

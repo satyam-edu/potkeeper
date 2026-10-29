@@ -43,9 +43,20 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const shower = state.players.find((p) => p.userId === state.showBy);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players, meId);
+  // The dealer button sits on the player just before the one who opened the round (they act first, clockwise).
+  const dealerId = (() => {
+    const n = state.players.length;
+    if (state.startIndex < 0 || n === 0) return null;
+    for (let k = 1; k <= n; k++) {
+      const q = state.players[(((state.startIndex - k) % n) + n) % n];
+      if (q && !q.cashedOut) return q.userId;
+    }
+    return null;
+  })();
   const seat = (p: (typeof seats)[number], fluid = false) => (
     <SeatCard
       fluid={fluid}
+      dealer={p.userId === dealerId}
       net={seatNet(state, p)}
       won={!!result?.some((w) => w.userId === p.userId)}
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
@@ -80,15 +91,18 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
 
       {seats.length <= ELLIPSE_MAX ? (
         <div className="relative mx-auto min-h-0 w-full flex-1">
+          <div aria-hidden="true" className="felt absolute inset-x-[2%] inset-y-[1%] rounded-[50%] border-[10px] border-[#6b4423] ring-2 ring-[#2b1a0d]">
+            <div className="absolute inset-2 rounded-[50%] border border-white/30" />
+          </div>
           {seatPositions(seats.length, 36, 35).map((pos, i) => (
             <div key={seats[i]!.userId} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos.left}%`, top: `${pos.top}%` }}>
               {seat(seats[i]!)}
             </div>
           ))}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{pot}</div>
+          <div className="absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2">{pot}</div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
+        <div className="felt flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-[40px] border-[10px] border-[#6b4423] p-2 ring-2 ring-[#2b1a0d]">
           {pot}
           <div className={`grid w-full gap-1.5 ${seats.length > 8 ? 'grid-cols-5' : 'grid-cols-4'}`}>
             {seats.map((p) => (
