@@ -12,6 +12,7 @@ import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
 import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
+import { WinCard } from './WinCard';
 import { SeatCard } from './SeatCard';
 import { SoundToggle } from './SoundToggle';
 import { RulesSheet } from './RulesSheet';
@@ -23,12 +24,13 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const [rules, setRules] = useState(false);
   const [totals, setTotals] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
+  const [winPopup, setWinPopup] = useState(false); // centre popup for a few seconds after a round ends
   const prev = useRef<RoomState | null>(null);
   // Remember who just won so the table can celebrate until the next round starts.
   useEffect(() => {
     const w = prev.current ? roundWinners(prev.current, state) : [];
-    if (w.length) setResult(w);
-    else if (state.phase !== 'BETWEEN_ROUNDS') setResult(null);
+    if (w.length) { setResult(w); setWinPopup(true); }
+    else if (state.phase !== 'BETWEEN_ROUNDS') { setResult(null); setWinPopup(false); }
     prev.current = state;
   }, [state]);
   const [sheet, setSheet] = useState<Player | null>(null);
@@ -96,11 +98,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       )}
 
-      {state.phase === 'BETWEEN_ROUNDS' && result && (
-        <p className="rounded-2xl bg-neon px-4 py-2 text-center font-bold text-ink" aria-live="polite">
-          ★ {result.map((w) => `${w.name} won ${rupees(Math.max(0, (state.roundLog ?? []).at(-1)?.[w.userId] ?? 0))}`).join(' · ')}
-        </p>
-      )}
+      {winPopup && state.phase === 'BETWEEN_ROUNDS' && result && <WinCard state={state} winners={result} onClose={() => setWinPopup(false)} />}
       {state.phase === 'BETWEEN_ROUNDS' ? (
         isHost ? (
           <button onClick={() => send({ t: 'START_ROUND' })} className="display h-16 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none">

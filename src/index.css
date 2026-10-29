@@ -64,3 +64,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bump { animation: none; }
 }
+
+@keyframes pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pop {
+  animation: pop 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop { animation: none; }
+}
