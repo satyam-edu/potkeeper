@@ -21,6 +21,12 @@ function context(): AudioContext | null {
   return ctx;
 }
 
+/** Phones only allow audio after a tap. Call once at startup so any tap (Create, Join, a name field) unlocks it before the first clip is needed. */
+export function armAudio() {
+  const c = context();
+  if (c) window.addEventListener('pointerdown', () => void c.resume(), { once: true });
+}
+
 /** Fetch and decode every clip. Call when the table opens; phones only allow audio after a tap, so also unlock on the first one. */
 export function loadSounds(): Promise<void> {
   const c = context();
@@ -28,7 +34,7 @@ export function loadSounds(): Promise<void> {
   const unlock = () => void c.resume();
   window.addEventListener('pointerdown', unlock, { once: true });
   loading ??= Promise.all(
-    ['pack', 'show', ...Array.from({ length: MAX_CLIP }, (_, i) => `n${i + 1}`)].map(async (name) => {
+    ['pack', 'show', 'started', 'nextround', ...Array.from({ length: MAX_CLIP }, (_, i) => `n${i + 1}`)].map(async (name) => {
       try {
         const res = await fetch(`/sounds/${name}.mp3`);
         if (res.ok) buffers.set(name, await c.decodeAudioData(await res.arrayBuffer()));
@@ -40,15 +46,15 @@ export function loadSounds(): Promise<void> {
   return loading;
 }
 
-/** Say a bet amount (₹1 to ₹70 from a clip, nothing above that), or the words "pack" / "show". */
-export function say(what: number | 'pack' | 'show') {
+/** Say a bet amount (₹1 to ₹70 from a clip, nothing above that), or "pack" / "show" / "game started" / "next round". */
+export function say(what: number | 'pack' | 'show' | 'started' | 'nextround') {
   if (!soundOn() || (typeof what === 'number' && what > MAX_CLIP)) return;
   const name = typeof what === 'number' ? `n${what}` : what;
   const c = context();
   const buf = buffers.get(name);
   if (!c || !buf) {
     // Clips not loaded yet (or missing): use the phone's own voice for this one.
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.speak(new SpeechSynthesisUtterance(String(what)));
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.speak(new SpeechSynthesisUtterance(what === 'started' ? 'Game started' : what === 'nextround' ? 'Next round' : String(what)));
     return;
   }
   void c.resume();

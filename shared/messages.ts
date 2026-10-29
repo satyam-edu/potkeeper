@@ -7,6 +7,8 @@ export function toAction(msg: ClientMessage, sessionId: string): Action | null {
     case 'START_ROUND': return { type: 'START_ROUND', sessionId };
     case 'BET': return { type: 'BET' };
     case 'PACK': return { type: 'PACK' };
+    case 'SHOW': return { type: 'SHOW' };
+    case 'CANCEL_SHOW': return { type: 'CANCEL_SHOW' };
     case 'UNDO': return { type: 'UNDO' };
     case 'END_GAME': return { type: 'END_GAME' };
     case 'REOPEN_GAME': return { type: 'REOPEN_GAME' };

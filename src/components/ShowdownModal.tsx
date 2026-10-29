@@ -5,8 +5,8 @@ import { rupees } from '../lib/format';
 import { ConfirmModal } from './ConfirmModal';
 import { RulesSheet } from './RulesSheet';
 
-/** "Who won?" — only ACTIVE players are listed; 2+ selected = tie split. Awarding needs a second confirm. */
-export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: number; topUp: number; active: Player[]; onAward: (ids: string[]) => void; onClose: () => void }) {
+/** "Who won?" — shown on every screen once someone calls show. Only ACTIVE players are listed; 2+ selected = tie split. Whoever may pick (host or a player still in) confirms; everyone else just watches. */
+export function ShowdownModal({ pot, topUp, active, by, canPick, onAward, onClose }: { pot: number; topUp: number; active: Player[]; by: string; canPick: boolean; onAward: (ids: string[]) => void; onClose?: () => void }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [rules, setRules] = useState(false);
@@ -14,8 +14,9 @@ export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: n
 
   const winners = active.filter((p) => picked.includes(p.userId));
   const { share, remainder } = splitPot(pot, Math.max(winners.length, 1));
-  const preview =
-    winners.length === 0
+  const preview = !canPick
+    ? 'Waiting for the winner to be picked…'
+    : winners.length === 0
       ? 'Select the winner, or several for a tie'
       : winners.length === 1
         ? `${winners[0]!.name} takes ${rupees(pot)}`
@@ -34,6 +35,7 @@ export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: n
               <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full bg-surface-2 font-bold text-neon">?</button>
             </span>
           </div>
+          <p className="mt-1 text-sm text-mid">{by} called show</p>
           <ul className="my-4 flex flex-col gap-2">
             {active.map((p) => {
               const on = picked.includes(p.userId);
@@ -41,6 +43,7 @@ export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: n
                 <li key={p.userId}>
                   <button
                     onClick={() => toggle(p.userId)}
+                    disabled={!canPick}
                     aria-pressed={on}
                     className={`flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-left font-semibold ${on ? 'bg-paper text-ink' : 'bg-surface-2'}`}
                   >
@@ -54,14 +57,14 @@ export function ShowdownModal({ pot, topUp, active, onAward, onClose }: { pot: n
           {topUp > 0 && <p className="-mt-2 mb-2 text-center text-xs text-mid">Includes {rupees(topUp)} from players matching the current bet</p>}
           <p className="mb-3 min-h-5 text-center text-sm text-mid" aria-live="polite">{preview}</p>
           <div className="flex gap-3">
-            <button onClick={onClose} className="h-14 basis-1/3 rounded-2xl bg-surface-2 font-semibold">Cancel</button>
-            <button
+            {onClose && <button onClick={onClose} className="h-14 basis-1/3 rounded-2xl bg-surface-2 font-semibold">Cancel show</button>}
+            {canPick && <button
               disabled={winners.length === 0}
               onClick={() => setConfirming(true)}
               className="display h-14 flex-1 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none"
             >
               Award Pot
-            </button>
+            </button>}
           </div>
         </div>
       </div>

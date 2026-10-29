@@ -9,7 +9,7 @@ import type { Session } from './session';
 const HOST = import.meta.env.VITE_ROOM_HOST ?? `${location.hostname}:1999`;
 
 // Messages whose result we predict locally with the same engine the server runs.
-const OPTIMISTIC = new Set<ClientMessage['t']>(['BET', 'PACK', 'AWARD_POT', 'REORDER', 'SET_BASE_BET']);
+const OPTIMISTIC = new Set<ClientMessage['t']>(['BET', 'PACK', 'SHOW', 'CANCEL_SHOW', 'AWARD_POT', 'REORDER', 'SET_BASE_BET']);
 
 export interface RoomError {
   code: ErrorCode;

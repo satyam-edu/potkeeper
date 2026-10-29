@@ -10,6 +10,8 @@ export type Action =
   | { type: 'START_ROUND'; sessionId: string }
   | { type: 'BET' }
   | { type: 'PACK' }
+  | { type: 'SHOW' }
+  | { type: 'CANCEL_SHOW' }
   | { type: 'AWARD_POT'; winnerIds: string[] }
   | { type: 'TRANSFER_HOST'; toUserId: string }
   | { type: 'UNDO' }
@@ -49,6 +51,7 @@ export function createRoom(code: string, hostId: string, hostName: string, baseB
     currentTurnIndex: -1,
     startIndex: -1,
     roundNumber: 0,
+    showBy: null,
     settledBalances: {},
     settledRounds: 0,
     historyStack: [],
@@ -69,7 +72,16 @@ export function checkInvariant(s: RoomState): boolean {
 export function reduce(state: RoomState, action: Action, actorId: string): Result {
   const r = apply(state, action, actorId);
   if (!r.ok) return r;
-  return checkInvariant(r.state) ? r : err('INVARIANT');
+  const next = dropStaleShow(r.state);
+  return checkInvariant(next) ? ok(next) : err('INVARIANT');
+}
+
+/** A Show only lives while the round does and while whoever called it is still in (the host's pot tap always counts). */
+function dropStaleShow(s: RoomState): RoomState {
+  if (!s.showBy) return s;
+  const by = s.players.find((p) => p.userId === s.showBy);
+  const live = s.phase === 'BETTING' && !!by && (by.status === 'ACTIVE' || by.userId === s.hostId);
+  return live ? s : { ...s, showBy: null };
 }
 
 function apply(s: RoomState, a: Action, actorId: string): Result {
@@ -80,14 +92,26 @@ function apply(s: RoomState, a: Action, actorId: string): Result {
       return mapPlayer(s, actorId, (p) => ({ ...p, connected: a.connected }));
     case 'START_ROUND':
       return isHost ? startRound(s, a.sessionId) : err('NOT_HOST');
-    case 'BET': return bet(s, actorId);
-    case 'PACK': return pack(s, actorId);
+    case 'BET': return s.showBy ? err('NOT_ALLOWED') : bet(s, actorId);
+    case 'PACK': return s.showBy ? err('NOT_ALLOWED') : pack(s, actorId);
+    case 'SHOW': {
+      if (s.phase !== 'BETTING') return err('WRONG_PHASE');
+      if (s.showBy) return err('NOT_ALLOWED');
+      if (!isHost) { // the host can call it any time (pot tap); a player only on their turn
+        const i = turnCheck(s, actorId);
+        if (typeof i !== 'number') return i;
+      }
+      return ok({ ...s, showBy: actorId });
+    }
+    case 'CANCEL_SHOW':
+      if (!s.showBy) return err('WRONG_PHASE');
+      return isHost || actorId === s.showBy ? ok({ ...s, showBy: null }) : err('NOT_ALLOWED');
     case 'AWARD_POT': {
       if (s.phase !== 'BETTING') return err('WRONG_PHASE');
       const actor = s.players.find((p) => p.userId === actorId);
       if (!isHost && actor?.status !== 'ACTIVE') return err('NOT_ALLOWED');
       const r = award(matchBets(s), a.winnerIds);
-      return r.ok ? ok(withHistory(s, r.state)) : r;
+      return r.ok ? ok(withHistory({ ...s, showBy: null }, r.state)) : r; // Undo must not reopen the popup
     }
     case 'TRANSFER_HOST': {
       if (!isHost) return err('NOT_HOST');

@@ -19,7 +19,6 @@ import { ShowdownModal } from './ShowdownModal';
 export function GameTable({ state, meId, send }: { state: RoomState; meId: string; send: (m: ClientMessage) => void }) {
   useWakeLock();
   useEffect(() => { void loadSounds(); }, []);
-  const [showdown, setShowdown] = useState(false);
   const [rules, setRules] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
   const [nets, setNets] = useState<Record<string, number> | null>(null);
@@ -37,12 +36,11 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const [sheet, setSheet] = useState<Player | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'end' } | { kind: 'remove' | 'transfer'; p: Player } | null>(null);
   const isHost = state.hostId === meId;
-  // Round ended under us (e.g. everyone else packed): drop the stale modal so it can't reopen next round.
-  useEffect(() => { if (state.phase !== 'BETTING') setShowdown(false); }, [state.phase]);
   const me = state.players.find((p) => p.userId === meId);
   const turnId = state.players[state.currentTurnIndex]?.userId;
   const myTurn = state.phase === 'BETTING' && turnId === meId && me?.status === 'ACTIVE';
   const staked = state.players.reduce((n, p) => n + p.roundBet, 0);
+  const shower = state.players.find((p) => p.userId === state.showBy);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players, meId);
   const seat = (p: (typeof seats)[number], fluid = false) => (
@@ -56,7 +54,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   // Only the host can tap the pot to award it. Any player on their turn can still use Show, which opens the same winner list.
   const canAward = state.phase === 'BETTING' && isHost;
   const active = state.players.filter((p) => p.status === 'ACTIVE');
-  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
+  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward && !state.showBy ? () => send({ t: 'SHOW' }) : undefined} />;
 
   return (
     <div className="flex h-[calc(100dvh-0.75rem-max(1rem,env(safe-area-inset-bottom)))] flex-col gap-2">
@@ -122,16 +120,18 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           <p className="text-center text-sm font-semibold" aria-live="polite">
             {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
           </p>
-          <ActionBar canAct={myTurn} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => setShowdown(true)} />
+          <ActionBar canAct={myTurn && !state.showBy} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => send({ t: 'SHOW' })} />
         </>
       )}
-      {showdown && state.phase === 'BETTING' && (
+      {state.phase === 'BETTING' && shower && (
         <ShowdownModal
           pot={showdownPot(state)}
           topUp={showdownPot(state) - state.pot}
           active={active}
-          onAward={(ids) => { send({ t: 'AWARD_POT', winnerIds: ids }); setShowdown(false); }}
-          onClose={() => setShowdown(false)}
+          by={shower.name}
+          canPick={isHost || me?.status === 'ACTIVE'}
+          onAward={(ids) => send({ t: 'AWARD_POT', winnerIds: ids })}
+          onClose={isHost || state.showBy === meId ? () => send({ t: 'CANCEL_SHOW' }) : undefined}
         />
       )}
       {rules && <RulesSheet onClose={() => setRules(false)} />}

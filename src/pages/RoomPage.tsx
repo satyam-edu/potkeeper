@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GameOver } from '../components/GameOver';
@@ -7,6 +7,7 @@ import { Lobby } from '../components/Lobby';
 import { NamePrompt } from '../components/NamePrompt';
 import { Toast } from '../components/Toast';
 import { loadSession, saveSession, type Session } from '../lib/session';
+import { loadSounds, say } from '../lib/sound';
 import { useBackGuard } from '../lib/useBackGuard';
 import { useRoom } from '../lib/useRoom';
 
@@ -30,6 +31,18 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   const [, go] = useLocation();
   const create = Number(new URLSearchParams(useSearch()).get('create')) || undefined;
   const { state, online, error, save, send } = useRoom(code, session, create);
+
+  // Clips load as soon as the room opens (not only at the table), so "Game started" is ready when the host taps Start.
+  const inRoom = !!state;
+  useEffect(() => { if (inRoom) void loadSounds(); }, [inRoom]);
+  // Everyone hears it when a round begins: "Game started" from the lobby, "Next round" from between rounds. Never on refresh.
+  const phase = state?.phase;
+  const lastPhase = useRef(phase);
+  useEffect(() => {
+    if (phase === 'BETTING' && lastPhase.current === 'LOBBY') say('started');
+    else if (phase === 'BETTING' && lastPhase.current === 'BETWEEN_ROUNDS') say('nextround');
+    lastPhase.current = phase;
+  }, [phase]);
 
   // Back button: mid-game it asks first; on the Game Over or cashed out screens it just goes home.
   const [leaving, setLeaving] = useState(false);
