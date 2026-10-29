@@ -26,6 +26,7 @@ export interface RoomState {
   startIndex: number; // index of the player who opened the last round; -1 before the first
   showBy: string | null; // userId whose Show (or the host's pot tap) is waiting for a winner; every screen shows the winner popup
   roundNumber: number;
+  roundLog: Record<string, number>[]; // one entry per finished round: each player's net (payout minus what they put in), by userId
   settledBalances: Record<string, number>; // balances wallets already hold from an earlier save of this room (set by REOPEN_GAME)
   settledRounds: number; // rounds already counted by that save
   historyStack: Snapshot[]; // last UNDO_DEPTH pre-action snapshots

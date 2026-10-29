@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { showdownPot } from '../../shared/engine';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
-import { roundNets, roundWinners, seatNet, type Winner } from '../lib/roundResult';
+import { roundWinners, seatNet, type Winner } from '../lib/roundResult';
 import { useWakeLock } from '../lib/useWakeLock';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
@@ -10,6 +10,7 @@ import { loadSounds } from '../lib/sound';
 import { ConfirmModal } from './ConfirmModal';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
+import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
 import { SeatCard } from './SeatCard';
 import { SoundToggle } from './SoundToggle';
@@ -20,17 +21,14 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   useWakeLock();
   useEffect(() => { void loadSounds(); }, []);
   const [rules, setRules] = useState(false);
+  const [totals, setTotals] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
-  const [nets, setNets] = useState<Record<string, number> | null>(null);
   const prev = useRef<RoomState | null>(null);
   // Remember who just won so the table can celebrate until the next round starts.
   useEffect(() => {
     const w = prev.current ? roundWinners(prev.current, state) : [];
     if (w.length) setResult(w);
     else if (state.phase !== 'BETWEEN_ROUNDS') setResult(null);
-    const n = prev.current ? roundNets(prev.current, state) : null;
-    if (n) setNets(n);
-    else if (state.phase !== 'BETWEEN_ROUNDS') setNets(null);
     prev.current = state;
   }, [state]);
   const [sheet, setSheet] = useState<Player | null>(null);
@@ -46,7 +44,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const seat = (p: (typeof seats)[number], fluid = false) => (
     <SeatCard
       fluid={fluid}
-      net={seatNet(state, p, nets)}
+      net={seatNet(state, p)}
       won={!!result?.some((w) => w.userId === p.userId)}
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
@@ -74,7 +72,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
       </header>
 
       <div className="relative">
-        <Scoreboard players={state.players} meId={meId} />
+        <Scoreboard state={state} meId={meId} onOpen={() => setTotals(true)} />
         <SoundToggle className="absolute right-1 top-0" />
       </div>
 
@@ -100,7 +98,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
 
       {state.phase === 'BETWEEN_ROUNDS' && result && (
         <p className="rounded-2xl bg-neon px-4 py-2 text-center font-bold text-ink" aria-live="polite">
-          ★ {result.map((w) => `${w.name} won ${rupees(Math.max(0, nets?.[w.userId] ?? 0))}`).join(' · ')}
+          ★ {result.map((w) => `${w.name} won ${rupees(Math.max(0, (state.roundLog ?? []).at(-1)?.[w.userId] ?? 0))}`).join(' · ')}
         </p>
       )}
       {state.phase === 'BETWEEN_ROUNDS' ? (
@@ -135,6 +133,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           onClose={isHost || state.showBy === meId ? () => send({ t: 'CANCEL_SHOW' }) : undefined}
         />
       )}
+      {totals && <GameTotalSheet state={state} meId={meId} onClose={() => setTotals(false)} />}
       {rules && <RulesSheet onClose={() => setRules(false)} />}
       {sheet && (
         <PlayerSheet

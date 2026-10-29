@@ -400,3 +400,32 @@ describe('show popup (showBy)', () => {
     expect(run(shown, { type: 'END_GAME' }, 'p1').showBy).toBeNull();
   });
 });
+
+describe('roundLog (round by round results)', () => {
+  const play = () => {
+    let s = started(3, 2);
+    s = run(s, { type: 'PACK' }, 'p1'); // out at 2
+    for (const id of ['p2', 'p3', 'p2', 'p3']) s = run(s, { type: 'BET' }, id); // level 10
+    return run(s, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p2'); // p2 shows, tops up to 10
+  };
+  it('logs each player net when the pot is awarded (p1 -2, p2 -10, p3 +12)', () => {
+    const s = play();
+    expect(s.roundLog).toEqual([{ p1: -2, p2: -10, p3: 12 }]);
+  });
+  it('an auto win is logged too, and rounds add up to each total', () => {
+    let s = run(play(), { type: 'START_ROUND', sessionId: 'x' }, 'p1');
+    s = run(s, { type: 'PACK' }, turn(s));
+    s = run(s, { type: 'PACK' }, turn(s));
+    expect(s.roundLog).toHaveLength(2);
+    for (const p of s.players) expect(s.roundLog.reduce((n, r) => n + (r[p.userId] ?? 0), 0)).toBe(p.sessionBalance);
+  });
+  it('Undo takes the round back out; End Game mid round logs nothing; New game clears, Reopen keeps', () => {
+    const done = play();
+    expect(run(done, { type: 'UNDO' }, 'p1').roundLog).toEqual([]);
+    const mid = run(done, { type: 'START_ROUND', sessionId: 'x' }, 'p1');
+    const ended = run(mid, { type: 'END_GAME' }, 'p1');
+    expect(ended.roundLog).toHaveLength(1);
+    expect(run(ended, { type: 'REOPEN_GAME' }, 'p1').roundLog).toHaveLength(1);
+    expect(run(ended, { type: 'NEW_GAME' }, 'p1').roundLog).toEqual([]);
+  });
+});

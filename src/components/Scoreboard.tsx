@@ -1,22 +1,24 @@
-import type { Player } from '../../shared/types';
+import type { RoomState } from '../../shared/types';
 import { signed } from '../lib/format';
+import { seatNet } from '../lib/roundResult';
 
-/** Whole game totals from finished rounds, biggest first. Seat cards show the current round, so stakes of a round in progress are left out here. */
-const total = (p: Player) => p.sessionBalance + p.roundBet;
-
-export function Scoreboard({ players, meId }: { players: Player[]; meId: string }) {
-  const rows = [...players].sort((a, b) => total(b) - total(a));
+/** This round's result for every player, biggest first. Tap it for the whole game (see GameTotalSheet). */
+export function Scoreboard({ state, meId, onOpen }: { state: RoomState; meId: string; onOpen: () => void }) {
+  const rows = state.players.map((p) => ({ p, net: seatNet(state, p) })).sort((a, b) => b.net - a.net);
   return (
-    <section aria-label="Game totals" className="rounded-xl bg-surface px-3 py-1.5">
-      <h2 className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-mid">Game total</h2>
-      <ul className="grid grid-cols-2 gap-x-5">
-        {rows.map((p) => (
-          <li key={p.userId} className={`flex items-baseline justify-between gap-2 text-xs leading-5 ${p.cashedOut ? 'opacity-50' : ''}`}>
+    <button onClick={onOpen} aria-label="Open game total" className="block w-full rounded-xl bg-surface px-3 py-1.5 text-left">
+      <span className="mb-0.5 flex items-center justify-between pr-8 text-[10px] font-semibold uppercase tracking-widest text-mid">
+        <span>This round</span>
+        <span>Game total ›</span>
+      </span>
+      <span className="grid grid-cols-2 gap-x-5">
+        {rows.map(({ p, net }) => (
+          <span key={p.userId} className={`flex items-baseline justify-between gap-2 text-xs leading-5 ${p.cashedOut ? 'opacity-50' : ''}`}>
             <span className={`truncate ${p.userId === meId ? 'font-bold' : 'text-mid'}`}>{p.name}</span>
-            <span className={`font-semibold tabular-nums ${total(p) < 0 ? 'text-danger' : total(p) > 0 ? 'text-neon' : 'text-white'}`}>{signed(total(p))}</span>
-          </li>
+            <span className={`font-semibold tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>{signed(net)}</span>
+          </span>
         ))}
-      </ul>
-    </section>
+      </span>
+    </button>
   );
 }

@@ -51,6 +51,7 @@ export function createRoom(code: string, hostId: string, hostName: string, baseB
     currentTurnIndex: -1,
     startIndex: -1,
     roundNumber: 0,
+    roundLog: [],
     showBy: null,
     settledBalances: {},
     settledRounds: 0,
@@ -262,6 +263,7 @@ function award(s: RoomState, winnerIds: string[]): Result {
   if (winners.length !== ids.size) return err('NOT_FOUND');
   if (winners.some((p) => p.status !== 'ACTIVE')) return err('NOT_ACTIVE');
   const { share, remainder } = splitPot(s.pot, ids.size);
+  const net = Object.fromEntries(s.players.filter((p) => p.roundBet > 0 || ids.has(p.userId)).map((p) => [p.userId, (ids.has(p.userId) ? share : 0) - p.roundBet]));
   const players = s.players.map((p) => ({
     ...p,
     sessionBalance: p.sessionBalance + (ids.has(p.userId) ? share : 0),
@@ -275,6 +277,7 @@ function award(s: RoomState, winnerIds: string[]): Result {
     currentBet: 0,
     phase: 'BETWEEN_ROUNDS',
     currentTurnIndex: -1,
+    roundLog: [...s.roundLog, net],
   });
 }
 
@@ -295,6 +298,7 @@ function undo(s: RoomState): Result {
     currentTurnIndex: prev.currentTurnIndex,
     startIndex: prev.startIndex,
     roundNumber: prev.roundNumber,
+    roundLog: prev.roundLog,
     sessionId: prev.sessionId,
     historyStack: s.historyStack.slice(0, -1),
   });
@@ -329,7 +333,7 @@ function newGame(s: RoomState): Result {
     .map((p, seat): Player => ({ ...p, seat, status: 'ACTIVE', sessionBalance: 0, roundBet: 0 }));
   return ok({
     ...s, players, phase: 'LOBBY', sessionId: '', pot: 0, carryOverPot: 0, currentBet: 0, currentTurnIndex: -1, startIndex: -1,
-    roundNumber: 0, settledBalances: {}, settledRounds: 0, historyStack: [],
+    roundNumber: 0, roundLog: [], settledBalances: {}, settledRounds: 0, historyStack: [],
   });
 }
 
