@@ -33,11 +33,6 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
     else if (state.phase !== 'BETWEEN_ROUNDS') { setResult(null); setWinPopup(false); }
     prev.current = state;
   }, [state]);
-  useEffect(() => {
-    if (!winPopup) return;
-    const t = setTimeout(() => setWinPopup(false), 10000);
-    return () => clearTimeout(t);
-  }, [winPopup]);
   const [sheet, setSheet] = useState<Player | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'end' } | { kind: 'remove' | 'transfer'; p: Player } | null>(null);
   const isHost = state.hostId === meId;

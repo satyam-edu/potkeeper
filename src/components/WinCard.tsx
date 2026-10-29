@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import type { RoomState } from '../../shared/types';
 import { signed } from '../lib/format';
 import type { Winner } from '../lib/roundResult';
+
+const SHOW_SECONDS = 10;
 
 const Corner = ({ flip }: { flip?: boolean }) => (
   <span aria-hidden="true" className={`absolute flex flex-col items-center leading-none ${flip ? 'bottom-3 right-3 rotate-180' : 'left-3 top-3'}`}>
@@ -9,8 +12,23 @@ const Corner = ({ flip }: { flip?: boolean }) => (
   </span>
 );
 
-/** Round result shaped like an ace card: the winner(s) big and highlighted, everyone else's loss underneath. Shown on every phone. Blocks the table behind it; a tap anywhere closes it. */
+/** Round result shaped like an ace card: the winner(s) big and highlighted, everyone else's loss underneath. Shown on every phone. Blocks the table behind it, closes itself after 10 seconds (small countdown on the card) or when the card is tapped. Tapping the dark area does nothing. */
 export function WinCard({ state, winners, onClose }: { state: RoomState; winners: Winner[]; onClose: () => void }) {
+  const [left, setLeft] = useState(SHOW_SECONDS);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const end = Date.now() + SHOW_SECONDS * 1000;
+    const id = setInterval(() => {
+      const s = Math.max(Math.ceil((end - Date.now()) / 1000), 0);
+      setLeft(s);
+      if (s <= 0) {
+        clearInterval(id);
+        close.current();
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
   const log = (state.roundLog ?? []).at(-1) ?? {};
   const won = new Set(winners.map((w) => w.userId));
   const others = Object.entries(log)
@@ -19,7 +37,7 @@ export function WinCard({ state, winners, onClose }: { state: RoomState; winners
     .sort((a, b) => a.net - b.net);
   return (
     <div role="dialog" aria-modal="true" aria-label="Round result" className="fixed inset-0 z-30 flex items-center justify-center px-6">
-      <button onClick={onClose} tabIndex={-1} aria-label="Close" className="absolute inset-0 bg-ink/75 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-ink/75 backdrop-blur-sm" aria-hidden="true" />
       <button
         onClick={onClose}
         aria-live="polite"
@@ -27,6 +45,7 @@ export function WinCard({ state, winners, onClose }: { state: RoomState; winners
       >
         <Corner />
         <Corner flip />
+        <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-bold tabular-nums text-ink/60" aria-label={`Closes in ${left} seconds`}>{left}s</span>
         <span className="flex h-full flex-col overflow-y-auto px-9 py-14">
           <span className="m-auto flex w-full flex-col">
         {winners.map((w) => (
