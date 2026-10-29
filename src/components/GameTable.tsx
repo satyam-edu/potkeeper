@@ -116,7 +116,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           <p className="flex items-center justify-center gap-3 rounded-2xl border-2 border-neon bg-surface py-1.5">
             <span className="blink h-2.5 w-2.5 rounded-full bg-neon" aria-hidden="true" />
             <span className="text-xs font-bold uppercase tracking-widest text-mid">Current bet</span>
-            <span key={state.currentBet} className="bump display text-4xl font-bold leading-none tabular-nums text-neon">{rupees(state.currentBet)}</span>
+            <span key={state.currentBet} className="bump text-3xl font-bold leading-none tabular-nums text-neon">{rupees(state.currentBet)}</span>
           </p>
           <p className="text-center text-sm font-semibold" aria-live="polite">
             {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
