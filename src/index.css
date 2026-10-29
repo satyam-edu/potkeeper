@@ -40,3 +40,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .blink { animation: none; }
 }
+
+.title-fade {
+  background: linear-gradient(180deg, #fff 35%, #8a8a8a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

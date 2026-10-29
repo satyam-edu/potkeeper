@@ -26,7 +26,6 @@ export function History({ session }: { session: Session }) {
 
   return (
     <section>
-      <p className="mb-2 text-xs font-semibold tracking-widest text-mid">HISTORY</p>
       {games?.length === 0 && <p className="text-mid">No games yet. Your finished games show up here.</p>}
       <ul className="flex flex-col gap-2">
         {games?.map((g) => (
