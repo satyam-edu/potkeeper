@@ -40,11 +40,11 @@ export async function guestLogin(name: string): Promise<Session> {
 }
 
 /** Ask the server who we are. `false` = the account is gone/merged/invalid (sign out); `null` = couldn't reach it (keep going). */
-export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number } | false | null> {
+export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number; email?: string } | false | null> {
   try {
     const res = await fetch('/api/me', { headers: { authorization: `Bearer ${s.token}` } });
     if (res.status === 401) return false;
-    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number }) : null;
+    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number; email?: string }) : null;
   } catch {
     return null;
   }

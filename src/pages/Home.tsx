@@ -24,6 +24,7 @@ export function Home() {
   const [logout, setLogout] = useState(false);
   const [tab, setTab] = useState<'play' | 'history'>('play');
   const [wallet, setWallet] = useState<number | null>(null);
+  const [email, setEmail] = useState<string | null>(null); // Google account, shown on the log out warning
   const dismissed = () => { try { return sessionStorage.getItem('pk_google_later') === '1'; } catch { return false; } };
   const [sheet, setSheet] = useState(() => !dismissed()); // shown once per browser session unless Google is connected
   const later = () => {
@@ -35,7 +36,7 @@ export function Home() {
   useEffect(() => {
     if (!session) return;
     void checkSession(session).then((me) => {
-      if (me) setWallet(me.walletBalance);
+      if (me) { setWallet(me.walletBalance); setEmail(me.email ?? null); }
       if (me === false) { saveSession(null); setSession(null); }
       else if (me && (me.isGuest !== session.isGuest || me.name !== session.name)) {
         const next = { ...session, isGuest: me.isGuest, name: me.name };
@@ -52,7 +53,7 @@ export function Home() {
       <div className="flex items-center justify-between">
         <img src="/logo.png" alt="PotKeeper" className="h-12 w-12 rounded-xl" />
         <button className="h-11 rounded-full bg-surface-2 px-4 text-sm font-semibold text-mid" onClick={() => setLogout(true)}>
-          Not you?
+          Log out
         </button>
       </div>
       <div>
@@ -104,7 +105,7 @@ export function Home() {
           title="Log out?"
           body={session.isGuest
             ? "You are playing as a guest. If you log out, this guest wallet and its history can't be opened again. Sync Google first if you want to keep them."
-            : 'You will be logged out on this device. Log in with Google again to get your wallet and history back.'}
+            : `${email ? `You are logged in with Google as ${email}. ` : ''}You will be logged out on this device. Log in with Google again to get your wallet and history back.`}
           confirmLabel="Log out"
           onConfirm={() => { setLogout(false); saveSession(null); setSession(null); }}
           onCancel={() => setLogout(false)}
