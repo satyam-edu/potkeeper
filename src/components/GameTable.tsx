@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { betCost, showdownPot } from '../../shared/engine';
+import { showdownPot } from '../../shared/engine';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
-import { roundWinners, type Winner } from '../lib/roundResult';
+import { roundNets, roundWinners, seatNet, type Winner } from '../lib/roundResult';
 import { useWakeLock } from '../lib/useWakeLock';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
@@ -9,6 +9,7 @@ import { ActionBar } from './ActionBar';
 import { ConfirmModal } from './ConfirmModal';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
+import { Scoreboard } from './Scoreboard';
 import { SeatCard } from './SeatCard';
 import { RulesSheet } from './RulesSheet';
 import { ShowdownModal } from './ShowdownModal';
@@ -18,12 +19,16 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const [showdown, setShowdown] = useState(false);
   const [rules, setRules] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
+  const [nets, setNets] = useState<Record<string, number> | null>(null);
   const prev = useRef<RoomState | null>(null);
   // Remember who just won so the table can celebrate until the next round starts.
   useEffect(() => {
     const w = prev.current ? roundWinners(prev.current, state) : [];
     if (w.length) setResult(w);
     else if (state.phase !== 'BETWEEN_ROUNDS') setResult(null);
+    const n = prev.current ? roundNets(prev.current, state) : null;
+    if (n) setNets(n);
+    else if (state.phase !== 'BETWEEN_ROUNDS') setNets(null);
     prev.current = state;
   }, [state]);
   const [sheet, setSheet] = useState<Player | null>(null);
@@ -37,8 +42,10 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const staked = state.players.reduce((n, p) => n + p.roundBet, 0);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players, meId);
-  const seat = (p: (typeof seats)[number]) => (
+  const seat = (p: (typeof seats)[number], fluid = false) => (
     <SeatCard
+      fluid={fluid}
+      net={seatNet(state, p, nets)}
       won={!!result?.some((w) => w.userId === p.userId)}
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
@@ -49,7 +56,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
 
   return (
-    <div className="flex flex-1 flex-col gap-3">
+    <div className="flex h-[calc(100dvh-0.75rem-max(1rem,env(safe-area-inset-bottom)))] flex-col gap-2">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="display text-xl font-bold tracking-widest">{state.code}</span>
@@ -65,9 +72,11 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       </header>
 
+      <Scoreboard players={state.players} meId={meId} />
+
       {seats.length <= ELLIPSE_MAX ? (
-        <div className="relative mx-auto aspect-[4/5] w-full flex-1">
-          {seatPositions(seats.length).map((pos, i) => (
+        <div className="relative mx-auto min-h-0 w-full flex-1">
+          {seatPositions(seats.length, 36, 35).map((pos, i) => (
             <div key={seats[i]!.userId} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos.left}%`, top: `${pos.top}%` }}>
               {seat(seats[i]!)}
             </div>
@@ -75,13 +84,13 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{pot}</div>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center gap-4">
-          <div className="grid grid-cols-4 gap-2">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
+          {pot}
+          <div className={`grid w-full gap-1.5 ${seats.length > 8 ? 'grid-cols-5' : 'grid-cols-4'}`}>
             {seats.map((p) => (
-              <div key={p.userId}>{seat(p)}</div>
+              <div key={p.userId}>{seat(p, true)}</div>
             ))}
           </div>
-          {pot}
         </div>
       )}
 
@@ -100,11 +109,14 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         )
       ) : (
         <>
-          <p className="text-center text-xs text-mid">Current bet <b className="text-white">{rupees(state.currentBet)}</b></p>
+          <p className="flex items-center justify-center gap-2 text-xs text-mid">
+            <span className="blink h-2 w-2 rounded-full bg-neon" aria-hidden="true" />
+            Current bet <b className="text-white">{rupees(state.currentBet)}</b>
+          </p>
           <p className="text-center text-sm font-semibold" aria-live="polite">
             {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
           </p>
-          <ActionBar canAct={myTurn} level={state.currentBet + state.baseBet} cost={me ? betCost(state, me) : state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} />
+          <ActionBar canAct={myTurn} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => setShowdown(true)} />
         </>
       )}
       {showdown && state.phase === 'BETTING' && (

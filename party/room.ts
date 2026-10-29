@@ -64,8 +64,15 @@ export class Room extends Server<Cloudflare.Env> {
     if (!userId || !this.state) return this.fail(conn, 'NOT_JOINED');
     const action = toAction(msg, crypto.randomUUID());
     if (!action) return this.fail(conn, 'BAD_MESSAGE');
+    const resuming = action.type === 'REOPEN_GAME' || action.type === 'NEW_GAME';
+    // The next game must not overwrite a result that is still waiting to be saved.
+    if (resuming && this.state.hostId === userId && this.state.phase === 'ENDED' && this.saveStatus !== 'saved') return this.fail(conn, 'NOT_SAVED');
     const r = this.commit(action, userId);
     if (!r.ok) return this.fail(conn, r.error);
+    if (resuming) {
+      this.saveStatus = undefined;
+      this.startedAt = undefined;
+    }
     if (action.type === 'START_ROUND') this.startedAt ??= new Date().toISOString();
     if (action.type === 'END_GAME') {
       this.broadcastSettlement();

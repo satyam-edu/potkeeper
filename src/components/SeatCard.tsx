@@ -1,40 +1,29 @@
 import type { Player } from '../../shared/types';
-import { hue, initials, rupees, signed } from '../lib/format';
+import { signed } from '../lib/format';
 
-export function SeatCard({ p, isTurn, isMe, isHost, won, onClick }: { p: Player; isTurn: boolean; isMe: boolean; isHost: boolean; won?: boolean; onClick?: () => void }) {
+/** `net` is this round only; the game total lives in the Scoreboard. */
+export function SeatCard({ p, net, fluid, isTurn, isMe, isHost, won, onClick }: { p: Player; net: number; fluid?: boolean; isTurn: boolean; isMe: boolean; isHost: boolean; won?: boolean; onClick?: () => void }) {
   const Tag = onClick ? 'button' : 'div';
   const out = p.cashedOut || p.status === 'PACKED';
   const waiting = p.status === 'WAITING' && !p.cashedOut;
+  // One small line under the amount: status first, otherwise who this seat is.
+  const note = p.cashedOut ? 'Cashed out' : waiting ? 'Next round' : p.status === 'PACKED' ? 'Packed' : [isMe && 'You', isHost && 'Host'].filter(Boolean).join(' · ');
   return (
     <Tag
       onClick={onClick}
       className={[
-        'flex w-[84px] flex-col items-center gap-0.5 rounded-[20px] border px-1.5 py-2 text-center transition-all',
-        isTurn ? 'border-neon bg-surface shadow-[0_0_18px_rgba(198,255,0,.45)] animate-pulse' : 'border-line bg-surface',
+        `flex ${fluid ? 'w-full px-0.5' : 'w-[84px] px-1.5'} flex-col items-center gap-0.5 rounded-[20px] border-2 py-2 text-center`,
+        isTurn ? 'border-neon bg-surface' : 'border-line bg-surface',
         won ? 'border-neon bg-neon/15' : '',
         waiting ? 'border-dashed' : '',
-        out ? 'opacity-40 grayscale' : '',
+        out ? 'opacity-40' : '',
       ].join(' ')}
     >
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-ink"
-        style={{ background: `hsl(${hue(p.userId)} 80% 70%)` }}
-      >
-        {initials(p.name)}
-      </div>
-      <p className="w-full truncate text-xs font-semibold">{p.name}</p>
-      <p className={`display text-base font-bold leading-none tabular-nums ${p.sessionBalance < 0 ? 'text-danger' : p.sessionBalance > 0 ? 'text-neon' : 'text-white'}`}>
-        {signed(p.sessionBalance)}
+      <p className={`w-full font-semibold leading-tight [overflow-wrap:anywhere] ${fluid ? 'text-[10px]' : 'text-sm'}`}>{p.name}</p>
+      <p className={`display ${fluid ? 'text-base' : 'text-xl'} font-bold leading-none tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>
+        {signed(net)}
       </p>
-      <p className="text-[10px] text-mid">
-        {p.cashedOut ? 'Cashed out' : waiting ? 'Next round' : p.status === 'PACKED' ? 'Packed' : `In ${rupees(p.roundBet)}`}
-      </p>
-      {(isMe || isHost) && (
-        <p className="flex gap-1 text-[9px] font-bold uppercase">
-          {isMe && <span className="rounded bg-paper px-1 text-ink">You</span>}
-          {isHost && <span className="rounded bg-surface-2 px-1 text-neon">Host</span>}
-        </p>
-      )}
+      <p className={`min-h-3 font-semibold uppercase leading-none text-mid ${fluid ? 'text-[8px]' : 'text-[10px]'}`}>{note}</p>
     </Tag>
   );
 }

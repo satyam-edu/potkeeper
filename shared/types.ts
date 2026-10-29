@@ -25,6 +25,8 @@ export interface RoomState {
   currentTurnIndex: number; // index into players[]; -1 when no round is running
   startIndex: number; // index of the player who opened the last round; -1 before the first
   roundNumber: number;
+  settledBalances: Record<string, number>; // balances wallets already hold from an earlier save of this room (set by REOPEN_GAME)
+  settledRounds: number; // rounds already counted by that save
   historyStack: Snapshot[]; // last UNDO_DEPTH pre-action snapshots
 }
 export type Snapshot = Omit<RoomState, 'historyStack'>;
@@ -39,6 +41,8 @@ export type ClientMessage =
   | { t: 'TRANSFER_HOST'; toUserId: string }
   | { t: 'UNDO' }
   | { t: 'END_GAME' }
+  | { t: 'REOPEN_GAME' }
+  | { t: 'NEW_GAME' }
   | { t: 'REORDER'; order: string[] }
   | { t: 'SET_BASE_BET'; baseBet: number }
   | { t: 'REMOVE_PLAYER'; userId: string };
@@ -70,4 +74,4 @@ export type EngineError =
   | 'REMOVED'
   | 'INVARIANT';
 
-export type ErrorCode = EngineError | 'BAD_TOKEN' | 'BAD_MESSAGE' | 'ROOM_EXISTS' | 'ROOM_NOT_FOUND' | 'NOT_JOINED';
+export type ErrorCode = EngineError | 'BAD_TOKEN' | 'NOT_SAVED' | 'BAD_MESSAGE' | 'ROOM_EXISTS' | 'ROOM_NOT_FOUND' | 'NOT_JOINED';
