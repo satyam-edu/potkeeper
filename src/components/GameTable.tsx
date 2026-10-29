@@ -6,16 +6,19 @@ import { useWakeLock } from '../lib/useWakeLock';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
 import { ActionBar } from './ActionBar';
+import { loadSounds } from '../lib/sound';
 import { ConfirmModal } from './ConfirmModal';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
 import { Scoreboard } from './Scoreboard';
 import { SeatCard } from './SeatCard';
+import { SoundToggle } from './SoundToggle';
 import { RulesSheet } from './RulesSheet';
 import { ShowdownModal } from './ShowdownModal';
 
 export function GameTable({ state, meId, send }: { state: RoomState; meId: string; send: (m: ClientMessage) => void }) {
   useWakeLock();
+  useEffect(() => { void loadSounds(); }, []);
   const [showdown, setShowdown] = useState(false);
   const [rules, setRules] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
@@ -72,7 +75,10 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       </header>
 
-      <Scoreboard players={state.players} meId={meId} />
+      <div className="relative">
+        <Scoreboard players={state.players} meId={meId} />
+        <SoundToggle className="absolute right-1 top-0" />
+      </div>
 
       {seats.length <= ELLIPSE_MAX ? (
         <div className="relative mx-auto min-h-0 w-full flex-1">
