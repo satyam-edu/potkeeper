@@ -47,3 +47,14 @@ body {
   background-clip: text;
   color: transparent;
 }
+
+@keyframes bump {
+  from { transform: scale(1.3); }
+  to { transform: scale(1); }
+}
+.bump {
+  animation: bump 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bump { animation: none; }
+}
