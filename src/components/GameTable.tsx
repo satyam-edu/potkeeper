@@ -53,8 +53,8 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
   );
-  // Host or any ACTIVE player can call the showdown, since cards are flipped on the real table.
-  const canAward = state.phase === 'BETTING' && (isHost || me?.status === 'ACTIVE');
+  // Only the host can tap the pot to award it. Any player on their turn can still use Show, which opens the same winner list.
+  const canAward = state.phase === 'BETTING' && isHost;
   const active = state.players.filter((p) => p.status === 'ACTIVE');
   const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
 
