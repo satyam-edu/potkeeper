@@ -50,7 +50,7 @@ export function Home() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span aria-hidden="true" className="display flex h-11 w-11 items-center justify-center rounded-full bg-neon text-2xl font-bold text-ink">P</span>
+        <img src="/logo.png" alt="PotKeeper" className="h-12 w-12 rounded-xl" />
         <button className="h-11 rounded-full bg-surface-2 px-4 text-sm font-semibold text-mid" onClick={() => setLogout(true)}>
           Not you?
         </button>
