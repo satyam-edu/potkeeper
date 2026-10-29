@@ -1,59 +1,58 @@
 import { useEffect, useRef, useState } from 'react';
 import { showdownPot } from '../../shared/engine';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
-import { roundNets, roundWinners, seatNet, type Winner } from '../lib/roundResult';
+import { roundWinners, seatNet, type Winner } from '../lib/roundResult';
 import { useWakeLock } from '../lib/useWakeLock';
 import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
 import { rupees, signed } from '../lib/format';
 import { ActionBar } from './ActionBar';
+import { loadSounds } from '../lib/sound';
 import { ConfirmModal } from './ConfirmModal';
 import { PlayerSheet } from './PlayerSheet';
 import { PotButton } from './PotButton';
+import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
 import { SeatCard } from './SeatCard';
+import { SoundToggle } from './SoundToggle';
 import { RulesSheet } from './RulesSheet';
 import { ShowdownModal } from './ShowdownModal';
 
 export function GameTable({ state, meId, send }: { state: RoomState; meId: string; send: (m: ClientMessage) => void }) {
   useWakeLock();
-  const [showdown, setShowdown] = useState(false);
+  useEffect(() => { void loadSounds(); }, []);
   const [rules, setRules] = useState(false);
+  const [totals, setTotals] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
-  const [nets, setNets] = useState<Record<string, number> | null>(null);
   const prev = useRef<RoomState | null>(null);
   // Remember who just won so the table can celebrate until the next round starts.
   useEffect(() => {
     const w = prev.current ? roundWinners(prev.current, state) : [];
     if (w.length) setResult(w);
     else if (state.phase !== 'BETWEEN_ROUNDS') setResult(null);
-    const n = prev.current ? roundNets(prev.current, state) : null;
-    if (n) setNets(n);
-    else if (state.phase !== 'BETWEEN_ROUNDS') setNets(null);
     prev.current = state;
   }, [state]);
   const [sheet, setSheet] = useState<Player | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'end' } | { kind: 'remove' | 'transfer'; p: Player } | null>(null);
   const isHost = state.hostId === meId;
-  // Round ended under us (e.g. everyone else packed): drop the stale modal so it can't reopen next round.
-  useEffect(() => { if (state.phase !== 'BETTING') setShowdown(false); }, [state.phase]);
   const me = state.players.find((p) => p.userId === meId);
   const turnId = state.players[state.currentTurnIndex]?.userId;
   const myTurn = state.phase === 'BETTING' && turnId === meId && me?.status === 'ACTIVE';
   const staked = state.players.reduce((n, p) => n + p.roundBet, 0);
+  const shower = state.players.find((p) => p.userId === state.showBy);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players, meId);
   const seat = (p: (typeof seats)[number], fluid = false) => (
     <SeatCard
       fluid={fluid}
-      net={seatNet(state, p, nets)}
+      net={seatNet(state, p)}
       won={!!result?.some((w) => w.userId === p.userId)}
       onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
   );
-  // Host or any ACTIVE player can call the showdown, since cards are flipped on the real table.
-  const canAward = state.phase === 'BETTING' && (isHost || me?.status === 'ACTIVE');
+  // Only the host can tap the pot to award it. Any player on their turn can still use Show, which opens the same winner list.
+  const canAward = state.phase === 'BETTING' && isHost;
   const active = state.players.filter((p) => p.status === 'ACTIVE');
-  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward ? () => setShowdown(true) : undefined} />;
+  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward && !state.showBy ? () => send({ t: 'SHOW' }) : undefined} />;
 
   return (
     <div className="flex h-[calc(100dvh-0.75rem-max(1rem,env(safe-area-inset-bottom)))] flex-col gap-2">
@@ -72,7 +71,10 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         </div>
       </header>
 
-      <Scoreboard players={state.players} meId={meId} />
+      <div className="relative">
+        <Scoreboard state={state} meId={meId} onOpen={() => setTotals(true)} />
+        <SoundToggle className="absolute right-1 top-0" />
+      </div>
 
       {seats.length <= ELLIPSE_MAX ? (
         <div className="relative mx-auto min-h-0 w-full flex-1">
@@ -96,7 +98,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
 
       {state.phase === 'BETWEEN_ROUNDS' && result && (
         <p className="rounded-2xl bg-neon px-4 py-2 text-center font-bold text-ink" aria-live="polite">
-          ★ {result.map((w) => w.name).join(' & ')} won {rupees(result.reduce((n, w) => n + w.gain, 0))}
+          ★ {result.map((w) => `${w.name} won ${rupees(Math.max(0, (state.roundLog ?? []).at(-1)?.[w.userId] ?? 0))}`).join(' · ')}
         </p>
       )}
       {state.phase === 'BETWEEN_ROUNDS' ? (
@@ -109,25 +111,29 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         )
       ) : (
         <>
-          <p className="flex items-center justify-center gap-2 text-xs text-mid">
-            <span className="blink h-2 w-2 rounded-full bg-neon" aria-hidden="true" />
-            Current bet <b className="text-white">{rupees(state.currentBet)}</b>
+          <p className="flex items-center justify-center gap-3 rounded-2xl border-2 border-neon bg-surface py-1.5">
+            <span className="blink h-2.5 w-2.5 rounded-full bg-neon" aria-hidden="true" />
+            <span className="text-xs font-bold uppercase tracking-widest text-mid">Current bet</span>
+            <span key={state.currentBet} className="bump text-3xl font-bold leading-none tabular-nums text-neon">{rupees(state.currentBet)}</span>
           </p>
           <p className="text-center text-sm font-semibold" aria-live="polite">
             {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
           </p>
-          <ActionBar canAct={myTurn} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => setShowdown(true)} />
+          <ActionBar canAct={myTurn && !state.showBy} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => send({ t: 'SHOW' })} />
         </>
       )}
-      {showdown && state.phase === 'BETTING' && (
+      {state.phase === 'BETTING' && shower && (
         <ShowdownModal
           pot={showdownPot(state)}
           topUp={showdownPot(state) - state.pot}
           active={active}
-          onAward={(ids) => { send({ t: 'AWARD_POT', winnerIds: ids }); setShowdown(false); }}
-          onClose={() => setShowdown(false)}
+          by={shower.name}
+          canPick={isHost || me?.status === 'ACTIVE'}
+          onAward={(ids) => send({ t: 'AWARD_POT', winnerIds: ids })}
+          onClose={isHost || state.showBy === meId ? () => send({ t: 'CANCEL_SHOW' }) : undefined}
         />
       )}
+      {totals && <GameTotalSheet state={state} meId={meId} onClose={() => setTotals(false)} />}
       {rules && <RulesSheet onClose={() => setRules(false)} />}
       {sheet && (
         <PlayerSheet

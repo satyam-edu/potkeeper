@@ -36,7 +36,7 @@ export function History({ session }: { session: Session }) {
                 <span className="text-sm text-mid">{time(g.endedAt)} · {g.rounds} round{g.rounds === 1 ? '' : 's'} · ₹{g.baseBet} base</span>
               </span>
               <span className="flex items-center gap-2">
-                <span className={`display text-xl font-bold tabular-nums ${g.net === 0 ? 'text-mid' : tone(g.net)}`}>{signed(g.net)}</span>
+                <span className={`amount text-xl tabular-nums ${g.net === 0 ? 'text-mid' : tone(g.net)}`}>{signed(g.net)}</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-5 w-5 text-mid transition-transform ${open === g.id ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 6l6 6-6 6" />
                 </svg>

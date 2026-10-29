@@ -20,7 +20,7 @@ export function SeatCard({ p, net, fluid, isTurn, isMe, isHost, won, onClick }: 
       ].join(' ')}
     >
       <p className={`w-full font-semibold leading-tight [overflow-wrap:anywhere] ${fluid ? 'text-[10px]' : 'text-sm'}`}>{p.name}</p>
-      <p className={`display ${fluid ? 'text-base' : 'text-xl'} font-bold leading-none tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>
+      <p className={`${fluid ? 'text-base' : 'text-xl'} font-bold leading-none tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>
         {signed(net)}
       </p>
       <p className={`min-h-3 font-semibold uppercase leading-none text-mid ${fluid ? 'text-[8px]' : 'text-[10px]'}`}>{note}</p>

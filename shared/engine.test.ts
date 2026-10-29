@@ -362,3 +362,70 @@ describe('game total (balance + roundBet) only moves when a round finishes', () 
     expect(totals(s)).toEqual({ p1: 15, p2: -5, p3: -10 }); // round 2 starting does not move it
   });
 });
+
+describe('show popup (showBy)', () => {
+  // p1 (host) bets first, so it is p2's turn
+  const atP2 = () => run(started(3, 5), { type: 'BET' }, 'p1');
+  it('a player can show only on their turn, the host any time; one show at a time', () => {
+    const s = atP2();
+    expect(turn(s)).toBe('p2');
+    expect(code(s, { type: 'SHOW' }, 'p3')).toBe('NOT_YOUR_TURN');
+    expect(run(s, { type: 'SHOW' }, 'p2').showBy).toBe('p2');
+    expect(run(s, { type: 'SHOW' }, 'p1').showBy).toBe('p1'); // host pot tap, even off turn
+    expect(code(run(s, { type: 'SHOW' }, 'p2'), { type: 'SHOW' }, 'p1')).toBe('NOT_ALLOWED');
+    expect(code(s, { type: 'CANCEL_SHOW' }, 'p1')).toBe('WRONG_PHASE');
+  });
+  it('blocks BET and PACK while it is open; only the shower or the host can cancel', () => {
+    const shown = run(atP2(), { type: 'SHOW' }, 'p2');
+    expect(code(shown, { type: 'BET' }, 'p2')).toBe('NOT_ALLOWED');
+    expect(code(shown, { type: 'PACK' }, 'p2')).toBe('NOT_ALLOWED');
+    expect(code(shown, { type: 'CANCEL_SHOW' }, 'p3')).toBe('NOT_ALLOWED');
+    expect(run(shown, { type: 'CANCEL_SHOW' }, 'p1').showBy).toBeNull();
+    const back = run(shown, { type: 'CANCEL_SHOW' }, 'p2');
+    expect(back.showBy).toBeNull();
+    expect(run(back, { type: 'BET' }, 'p2').currentBet).toBe(15); // play continues
+  });
+  it('any active player or the host picks the winner; the award closes it and Undo does not reopen it', () => {
+    const shown = run(atP2(), { type: 'SHOW' }, 'p2');
+    const done = run(shown, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p3');
+    expect(done.showBy).toBeNull();
+    expect(done.phase).toBe('BETWEEN_ROUNDS');
+    const undone = run(done, { type: 'UNDO' }, 'p1');
+    expect(undone.showBy).toBeNull();
+    expect(undone.phase).toBe('BETTING');
+  });
+  it('closes by itself when the shower is removed or the game ends', () => {
+    const shown = run(atP2(), { type: 'SHOW' }, 'p2');
+    expect(run(shown, { type: 'REMOVE_PLAYER', userId: 'p2' }, 'p1').showBy).toBeNull();
+    expect(run(shown, { type: 'END_GAME' }, 'p1').showBy).toBeNull();
+  });
+});
+
+describe('roundLog (round by round results)', () => {
+  const play = () => {
+    let s = started(3, 2);
+    s = run(s, { type: 'PACK' }, 'p1'); // out at 2
+    for (const id of ['p2', 'p3', 'p2', 'p3']) s = run(s, { type: 'BET' }, id); // level 10
+    return run(s, { type: 'AWARD_POT', winnerIds: ['p3'] }, 'p2'); // p2 shows, tops up to 10
+  };
+  it('logs each player net when the pot is awarded (p1 -2, p2 -10, p3 +12)', () => {
+    const s = play();
+    expect(s.roundLog).toEqual([{ p1: -2, p2: -10, p3: 12 }]);
+  });
+  it('an auto win is logged too, and rounds add up to each total', () => {
+    let s = run(play(), { type: 'START_ROUND', sessionId: 'x' }, 'p1');
+    s = run(s, { type: 'PACK' }, turn(s));
+    s = run(s, { type: 'PACK' }, turn(s));
+    expect(s.roundLog).toHaveLength(2);
+    for (const p of s.players) expect(s.roundLog.reduce((n, r) => n + (r[p.userId] ?? 0), 0)).toBe(p.sessionBalance);
+  });
+  it('Undo takes the round back out; End Game mid round logs nothing; New game clears, Reopen keeps', () => {
+    const done = play();
+    expect(run(done, { type: 'UNDO' }, 'p1').roundLog).toEqual([]);
+    const mid = run(done, { type: 'START_ROUND', sessionId: 'x' }, 'p1');
+    const ended = run(mid, { type: 'END_GAME' }, 'p1');
+    expect(ended.roundLog).toHaveLength(1);
+    expect(run(ended, { type: 'REOPEN_GAME' }, 'p1').roundLog).toHaveLength(1);
+    expect(run(ended, { type: 'NEW_GAME' }, 'p1').roundLog).toEqual([]);
+  });
+});
