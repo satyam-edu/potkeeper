@@ -229,7 +229,22 @@ describe('host ops & roster', () => {
     s = run(s, { type: 'BET' }, 'p1');
     expect(turn(s)).toBe('p3');
     expect(code(s, { type: 'REMOVE_PLAYER', userId: 'p1' }, 'p1')).toBe('NOT_ALLOWED');
-    expect(code(s, { type: 'JOIN', name: 'P2' }, 'p2')).toBe('REMOVED');
+    s = run(s, { type: 'JOIN', name: 'P2' }, 'p2'); // reconnecting does not bring them back
+    expect(s.players[1]).toMatchObject({ cashedOut: true, connected: true });
+  });
+  it('a cashed out player rejoins only when the host allows: keeps balance, waits for the next round', () => {
+    let s = started(4);
+    s = run(s, { type: 'REMOVE_PLAYER', userId: 'p2' }, 'p1');
+    expect(code(s, { type: 'REQUEST_REJOIN' }, 'p3')).toBe('NOT_ALLOWED'); // not cashed out
+    expect(code(s, { type: 'ANSWER_REJOIN', userId: 'p2', allow: true }, 'p1')).toBe('NOT_FOUND'); // no request yet
+    s = run(s, { type: 'REQUEST_REJOIN' }, 'p2');
+    expect(s.players[1]).toMatchObject({ cashedOut: true, wantsRejoin: true });
+    expect(code(s, { type: 'ANSWER_REJOIN', userId: 'p2', allow: true }, 'p3')).toBe('NOT_HOST');
+    const declined = run(s, { type: 'ANSWER_REJOIN', userId: 'p2', allow: false }, 'p1');
+    expect(declined.players[1]).toMatchObject({ cashedOut: true, wantsRejoin: false });
+    s = run(s, { type: 'ANSWER_REJOIN', userId: 'p2', allow: true }, 'p1');
+    expect(s.players[1]).toMatchObject({ cashedOut: false, wantsRejoin: false, status: 'WAITING', sessionBalance: -5 });
+    expect(s.players.filter((p) => p.status === 'ACTIVE')).toHaveLength(3);
   });
   it('removing the player on turn advances; removing down to one auto-wins', () => {
     let s = started(3);

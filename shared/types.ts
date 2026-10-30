@@ -10,6 +10,7 @@ export interface Player {
   sessionBalance: number; // integer ₹, may be negative
   roundBet: number; // integer ₹ put in this round (incl. entry); 0 outside BETTING
   cashedOut: boolean; // removed early; balance locked
+  wantsRejoin: boolean; // a cashed out player asked to come back; the host decides
 }
 
 export interface RoomState {
@@ -49,7 +50,9 @@ export type ClientMessage =
   | { t: 'NEW_GAME' }
   | { t: 'REORDER'; order: string[] }
   | { t: 'SET_BASE_BET'; baseBet: number }
-  | { t: 'REMOVE_PLAYER'; userId: string };
+  | { t: 'REMOVE_PLAYER'; userId: string }
+  | { t: 'REQUEST_REJOIN' }
+  | { t: 'ANSWER_REJOIN'; userId: string; allow: boolean };
 
 // Server → client messages.
 export type ServerMessage =
@@ -75,7 +78,6 @@ export type EngineError =
   | 'NOTHING_TO_UNDO'
   | 'NOT_ACTIVE'
   | 'NOT_ALLOWED'
-  | 'REMOVED'
   | 'INVARIANT';
 
 export type ErrorCode = EngineError | 'BAD_TOKEN' | 'NOT_SAVED' | 'BAD_MESSAGE' | 'ROOM_EXISTS' | 'ROOM_NOT_FOUND' | 'NOT_JOINED';

@@ -18,6 +18,8 @@ export function toAction(msg: ClientMessage, sessionId: string): Action | null {
     case 'REORDER': return Array.isArray(msg.order) ? { type: 'REORDER', order: msg.order.map(String) } : null;
     case 'SET_BASE_BET': return { type: 'SET_BASE_BET', baseBet: msg.baseBet };
     case 'REMOVE_PLAYER': return { type: 'REMOVE_PLAYER', userId: String(msg.userId) };
+    case 'REQUEST_REJOIN': return { type: 'REQUEST_REJOIN' };
+    case 'ANSWER_REJOIN': return { type: 'ANSWER_REJOIN', userId: String(msg.userId), allow: msg.allow === true };
     default: return null;
   }
 }

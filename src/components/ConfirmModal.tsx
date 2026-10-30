@@ -12,6 +12,7 @@ export function ConfirmModal({
   body,
   confirmLabel,
   tone = 'neon',
+  cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
 }: {
@@ -19,6 +20,7 @@ export function ConfirmModal({
   body: string;
   confirmLabel: string;
   tone?: keyof typeof TONE;
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -47,7 +49,7 @@ export function ConfirmModal({
             {confirmLabel}
           </button>
           <button ref={cancelRef} onClick={onCancel} className="h-12 rounded-2xl bg-surface-2 font-semibold active:scale-[.98]">
-            Cancel
+            {cancelLabel}
           </button>
         </div>
       </div>
