@@ -51,7 +51,7 @@ export class Room extends Server<Cloudflare.Env> {
       return this.broadcastState();
     }
     if (!this.state) return this.fail(conn, 'ROOM_NOT_FOUND');
-    const r = reduce(this.state, { type: 'JOIN', name, rejoin: msg.rejoin === true }, claims.sub);
+    const r = reduce(this.state, { type: 'JOIN', name }, claims.sub);
     if (!r.ok) return this.fail(conn, r.error);
     this.state = r.state;
     this.users.set(conn.id, claims.sub);

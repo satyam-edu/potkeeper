@@ -8,7 +8,6 @@ const TEXT: Partial<Record<ErrorCode, string>> = {
   NOT_ENOUGH_PLAYERS: 'Need at least 2 players',
   WRONG_PHASE: "That can't be done right now",
   NOTHING_TO_UNDO: 'Nothing to undo',
-  REMOVED: 'You were cashed out',
   NOT_SAVED: 'Wait until the game is saved',
 };
 

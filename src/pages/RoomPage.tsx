@@ -6,6 +6,7 @@ import { GameTable } from '../components/GameTable';
 import { Lobby } from '../components/Lobby';
 import { NamePrompt } from '../components/NamePrompt';
 import { Toast } from '../components/Toast';
+import { signed } from '../lib/format';
 import { loadSession, saveSession, type Session } from '../lib/session';
 import { loadSounds, say } from '../lib/sound';
 import { useBackGuard } from '../lib/useBackGuard';
@@ -47,8 +48,6 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   // Back button: mid-game it asks first; on the Game Over or cashed out screens it just goes home.
   const [leaving, setLeaving] = useState(false);
   const mine = state?.players.find((p) => p.userId === session.userId);
-  const [removed, setRemoved] = useState(false);
-  useEffect(() => { if (error?.code === 'REMOVED') setRemoved(true); }, [error]);
   const inGame = !!state && state.phase !== 'ENDED' && !mine?.cashedOut;
   useBackGuard(!!state, () => (inGame ? setLeaving(true) : go('/')));
 
@@ -71,24 +70,27 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
       </div>
     );
   }
-  // Cashed out: either the room says so, or a reconnect was refused with REMOVED (no state arrives then).
-  if (mine?.cashedOut || (removed && !state)) {
+  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
+
+  if (mine?.cashedOut) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <Toast code={error?.code ?? null} id={error?.id ?? 0} />
         <p className="display text-3xl font-bold">You were cashed out</p>
-        <p className="text-mid">The host removed you from this room. Your balance so far is kept.</p>
-        <button
-          onClick={() => send({ t: 'JOIN', token: session.token, name: session.name, rejoin: true })}
-          className="h-12 rounded-xl bg-neon px-6 font-bold text-ink"
-        >
-          Rejoin
-        </button>
+        <p className="text-mid">The host removed you from this room. Your balance so far is kept if you come back.</p>
+        {state.phase !== 'ENDED' && (
+          mine.wantsRejoin ? (
+            <p className="font-semibold text-neon">Waiting for the host to allow you…</p>
+          ) : (
+            <button onClick={() => send({ t: 'REQUEST_REJOIN' })} className="h-12 rounded-xl bg-neon px-6 font-bold text-ink">Ask to rejoin</button>
+          )
+        )}
         <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
       </div>
     );
   }
-  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
+  // The host answers one rejoin request at a time.
+  const asking = state.hostId === session.userId && state.phase !== 'ENDED' ? state.players.find((p) => p.cashedOut && p.wantsRejoin) : undefined;
 
   return (
     <>
@@ -108,6 +110,16 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
           confirmLabel={state.phase === 'LOBBY' ? 'Leave room' : 'Leave game'}
           onConfirm={() => { setLeaving(false); go('/'); }}
           onCancel={() => setLeaving(false)}
+        />
+      )}
+      {asking && (
+        <ConfirmModal
+          title={`${asking.name} wants to rejoin`}
+          body={`They keep their balance so far (${signed(asking.sessionBalance)}) and play from the next round.`}
+          confirmLabel="Allow"
+          cancelLabel="Decline"
+          onConfirm={() => send({ t: 'ANSWER_REJOIN', userId: asking.userId, allow: true })}
+          onCancel={() => send({ t: 'ANSWER_REJOIN', userId: asking.userId, allow: false })}
         />
       )}
       {state.phase === 'ENDED' ? (

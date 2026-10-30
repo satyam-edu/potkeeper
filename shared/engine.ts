@@ -5,7 +5,7 @@ export const MAX_PLAYERS = 10;
 export const UNDO_DEPTH = 3;
 
 export type Action =
-  | { type: 'JOIN'; name: string; rejoin?: boolean }
+  | { type: 'JOIN'; name: string }
   | { type: 'SET_CONNECTED'; connected: boolean }
   | { type: 'START_ROUND'; sessionId: string }
   | { type: 'BET' }
@@ -20,7 +20,9 @@ export type Action =
   | { type: 'NEW_GAME' }
   | { type: 'REORDER'; order: string[] }
   | { type: 'SET_BASE_BET'; baseBet: number }
-  | { type: 'REMOVE_PLAYER'; userId: string };
+  | { type: 'REMOVE_PLAYER'; userId: string }
+  | { type: 'REQUEST_REJOIN' }
+  | { type: 'ANSWER_REJOIN'; userId: string; allow: boolean };
 
 export type Result = { ok: true; state: RoomState } | { ok: false; error: EngineError };
 
@@ -60,7 +62,7 @@ export function createRoom(code: string, hostId: string, hostName: string, baseB
 }
 
 const newPlayer = (userId: string, name: string, seat: number, status: Player['status']): Player => ({
-  userId, name, seat, status, connected: true, sessionBalance: 0, roundBet: 0, cashedOut: false,
+  userId, name, seat, status, connected: true, sessionBalance: 0, roundBet: 0, cashedOut: false, wantsRejoin: false,
 });
 
 /** Zero-sum + integer invariant. Checked after every action. */
@@ -88,7 +90,7 @@ function dropStaleShow(s: RoomState): RoomState {
 function apply(s: RoomState, a: Action, actorId: string): Result {
   const isHost = actorId === s.hostId;
   switch (a.type) {
-    case 'JOIN': return join(s, actorId, a.name, a.rejoin);
+    case 'JOIN': return join(s, actorId, a.name);
     case 'SET_CONNECTED':
       return mapPlayer(s, actorId, (p) => ({ ...p, connected: a.connected }));
     case 'START_ROUND':
@@ -133,6 +135,8 @@ function apply(s: RoomState, a: Action, actorId: string): Result {
       return ok({ ...s, baseBet: a.baseBet, historyStack: [] });
     }
     case 'REMOVE_PLAYER': return isHost ? remove(s, a.userId) : err('NOT_HOST');
+    case 'REQUEST_REJOIN': return requestRejoin(s, actorId);
+    case 'ANSWER_REJOIN': return isHost ? answerRejoin(s, a.userId, a.allow) : err('NOT_HOST');
   }
 }
 
@@ -169,16 +173,10 @@ const liveCount = (s: RoomState) => s.players.filter((p) => !p.cashedOut).length
 
 // ---------- actions ----------
 
-function join(s: RoomState, userId: string, name: string, rejoin = false): Result {
+function join(s: RoomState, userId: string, name: string): Result {
   const existing = s.players.find((p) => p.userId === userId);
   if (existing) {
-    if (existing.cashedOut) {
-      // Only an explicit rejoin brings them back (a reconnect must not undo the host's cash out). Their locked balance carries on.
-      if (!rejoin) return err('REMOVED');
-      if (s.phase === 'ENDED') return err('WRONG_PHASE');
-      if (liveCount(s) >= MAX_PLAYERS) return err('ROOM_FULL');
-      return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true, cashedOut: false, status: s.phase === 'LOBBY' ? 'ACTIVE' : 'WAITING' }));
-    }
+    // A cashed out player still connects (to see their screen and ask to rejoin) but stays out until the host allows it.
     return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true }));
   }
   if (s.phase === 'ENDED') return err('WRONG_PHASE');
@@ -354,6 +352,26 @@ function reorder(s: RoomState, order: string[]): Result {
     players.push({ ...p, seat });
   }
   return ok({ ...s, players, historyStack: [] });
+}
+
+/** A cashed out player asks to come back; nothing changes until the host answers. */
+function requestRejoin(s: RoomState, userId: string): Result {
+  if (s.phase === 'ENDED') return err('WRONG_PHASE');
+  const p = s.players.find((q) => q.userId === userId);
+  if (!p?.cashedOut) return err('NOT_ALLOWED');
+  return mapPlayer(s, userId, (q) => ({ ...q, wantsRejoin: true }));
+}
+
+/** Allow: they return with their locked balance and play from the next round (at once in the lobby). Decline: the request is dropped. */
+function answerRejoin(s: RoomState, userId: string, allow: boolean): Result {
+  const p = s.players.find((q) => q.userId === userId);
+  if (!p?.cashedOut || !p.wantsRejoin) return err('NOT_FOUND');
+  if (!allow) return mapPlayer(s, userId, (q) => ({ ...q, wantsRejoin: false }));
+  if (s.phase === 'ENDED') return err('WRONG_PHASE');
+  if (liveCount(s) >= MAX_PLAYERS) return err('ROOM_FULL');
+  const status: Player['status'] = s.phase === 'LOBBY' ? 'ACTIVE' : 'WAITING';
+  const players = s.players.map((q) => (q.userId === userId ? { ...q, cashedOut: false, wantsRejoin: false, status } : q));
+  return ok({ ...s, players, historyStack: [] }); // like a removal, Undo can't go back past it
 }
 
 function remove(s: RoomState, userId: string): Result {
