@@ -231,6 +231,13 @@ describe('host ops & roster', () => {
     expect(code(s, { type: 'REMOVE_PLAYER', userId: 'p1' }, 'p1')).toBe('NOT_ALLOWED');
     expect(code(s, { type: 'JOIN', name: 'P2' }, 'p2')).toBe('REMOVED');
   });
+  it('a cashed out player can rejoin on request: keeps balance, waits for the next round', () => {
+    let s = started(4);
+    s = run(s, { type: 'REMOVE_PLAYER', userId: 'p2' }, 'p1');
+    s = run(s, { type: 'JOIN', name: 'P2', rejoin: true }, 'p2');
+    expect(s.players[1]).toMatchObject({ cashedOut: false, status: 'WAITING', sessionBalance: -5 });
+    expect(s.players.filter((p) => p.status === 'ACTIVE')).toHaveLength(3);
+  });
   it('removing the player on turn advances; removing down to one auto-wins', () => {
     let s = started(3);
     s = run(s, { type: 'TRANSFER_HOST', toUserId: 'p2' }, 'p1');

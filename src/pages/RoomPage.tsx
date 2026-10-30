@@ -47,6 +47,8 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   // Back button: mid-game it asks first; on the Game Over or cashed out screens it just goes home.
   const [leaving, setLeaving] = useState(false);
   const mine = state?.players.find((p) => p.userId === session.userId);
+  const [removed, setRemoved] = useState(false);
+  useEffect(() => { if (error?.code === 'REMOVED') setRemoved(true); }, [error]);
   const inGame = !!state && state.phase !== 'ENDED' && !mine?.cashedOut;
   useBackGuard(!!state, () => (inGame ? setLeaving(true) : go('/')));
 
@@ -69,17 +71,24 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
       </div>
     );
   }
-  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
-
-  if (state.players.find((p) => p.userId === session.userId)?.cashedOut) {
+  // Cashed out: either the room says so, or a reconnect was refused with REMOVED (no state arrives then).
+  if (mine?.cashedOut || (removed && !state)) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+        <Toast code={error?.code ?? null} id={error?.id ?? 0} />
         <p className="display text-3xl font-bold">You were cashed out</p>
-        <p className="text-mid">The host removed you from this room.</p>
+        <p className="text-mid">The host removed you from this room. Your balance so far is kept.</p>
+        <button
+          onClick={() => send({ t: 'JOIN', token: session.token, name: session.name, rejoin: true })}
+          className="h-12 rounded-xl bg-neon px-6 font-bold text-ink"
+        >
+          Rejoin
+        </button>
         <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
       </div>
     );
   }
+  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
 
   return (
     <>

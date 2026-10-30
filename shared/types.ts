@@ -35,7 +35,7 @@ export type Snapshot = Omit<RoomState, 'historyStack'>;
 
 // Client → server messages (the `t` discriminator is the wire format).
 export type ClientMessage =
-  | { t: 'JOIN'; token: string; name: string; create?: { baseBet: number } }
+  | { t: 'JOIN'; token: string; name: string; create?: { baseBet: number }; rejoin?: boolean }
   | { t: 'START_ROUND' }
   | { t: 'BET' }
   | { t: 'PACK' }

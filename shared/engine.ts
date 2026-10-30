@@ -5,7 +5,7 @@ export const MAX_PLAYERS = 10;
 export const UNDO_DEPTH = 3;
 
 export type Action =
-  | { type: 'JOIN'; name: string }
+  | { type: 'JOIN'; name: string; rejoin?: boolean }
   | { type: 'SET_CONNECTED'; connected: boolean }
   | { type: 'START_ROUND'; sessionId: string }
   | { type: 'BET' }
@@ -88,7 +88,7 @@ function dropStaleShow(s: RoomState): RoomState {
 function apply(s: RoomState, a: Action, actorId: string): Result {
   const isHost = actorId === s.hostId;
   switch (a.type) {
-    case 'JOIN': return join(s, actorId, a.name);
+    case 'JOIN': return join(s, actorId, a.name, a.rejoin);
     case 'SET_CONNECTED':
       return mapPlayer(s, actorId, (p) => ({ ...p, connected: a.connected }));
     case 'START_ROUND':
@@ -169,10 +169,16 @@ const liveCount = (s: RoomState) => s.players.filter((p) => !p.cashedOut).length
 
 // ---------- actions ----------
 
-function join(s: RoomState, userId: string, name: string): Result {
+function join(s: RoomState, userId: string, name: string, rejoin = false): Result {
   const existing = s.players.find((p) => p.userId === userId);
   if (existing) {
-    if (existing.cashedOut) return err('REMOVED');
+    if (existing.cashedOut) {
+      // Only an explicit rejoin brings them back (a reconnect must not undo the host's cash out). Their locked balance carries on.
+      if (!rejoin) return err('REMOVED');
+      if (s.phase === 'ENDED') return err('WRONG_PHASE');
+      if (liveCount(s) >= MAX_PLAYERS) return err('ROOM_FULL');
+      return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true, cashedOut: false, status: s.phase === 'LOBBY' ? 'ACTIVE' : 'WAITING' }));
+    }
     return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true }));
   }
   if (s.phase === 'ENDED') return err('WRONG_PHASE');
