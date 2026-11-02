@@ -124,7 +124,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
         />
       )}
       {state.phase === 'ENDED' ? (
-        <GameOver state={state} save={save} isHost={state.hostId === session.userId} send={send} onHome={() => go('/')} />
+        <GameOver state={state} save={save} isHost={state.hostId === session.userId} isGuest={session.isGuest} send={send} onHome={() => go('/')} />
       ) : state.phase === 'LOBBY' ? (
         <Lobby state={state} meId={session.userId} send={send} />
       ) : (

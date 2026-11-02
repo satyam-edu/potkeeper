@@ -154,7 +154,7 @@ export function Home() {
           onClose={() => setRenaming(false)}
         />
       )}
-      {session.isGuest && sheet && <GuestSheet onDone={(s) => { setSession(s); setSheet(false); }} onLater={later} />}
+      {session.isGuest && sheet && <GuestSheet balance={wallet} onDone={(s) => { setSession(s); setSheet(false); }} onLater={later} />}
     </div>
   );
 }

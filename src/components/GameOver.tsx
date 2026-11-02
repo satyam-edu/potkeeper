@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { DealingCards } from './DealingCards';
+import { GuestSheet } from './GuestSheet';
 import { simplifyDebts } from '../../shared/settle';
 import type { ClientMessage, RoomState } from '../../shared/types';
 import { rupees, signed } from '../lib/format';
@@ -12,7 +14,10 @@ const SAVE_TEXT = {
 const BTN = 'display h-16 rounded-3xl text-xl font-bold uppercase tracking-wide active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none';
 
 /** Settle-Up screen (DESIGN 6.6): leaderboard, who pays whom, and whether the wallets were updated. */
-export function GameOver({ state, save, isHost, send, onHome }: { state: RoomState; save: keyof typeof SAVE_TEXT; isHost: boolean; send: (m: ClientMessage) => void; onHome: () => void }) {
+export function GameOver({ state, save, isHost, isGuest, send, onHome }: { state: RoomState; save: keyof typeof SAVE_TEXT; isHost: boolean; isGuest: boolean; send: (m: ClientMessage) => void; onHome: () => void }) {
+  // A guest has just seen their result saved: the best moment to ask them to keep it. Once per game over screen.
+  const [nudge, setNudge] = useState(false);
+  useEffect(() => { if (isGuest && save === 'saved') setNudge(true); }, [isGuest, save]);
   const name = (id: string) => state.players.find((p) => p.userId === id)?.name ?? '?';
   const board = [...state.players].sort((a, b) => b.sessionBalance - a.sessionBalance);
   const payments = simplifyDebts(Object.fromEntries(state.players.map((p) => [p.userId, p.sessionBalance])));
@@ -72,6 +77,7 @@ export function GameOver({ state, save, isHost, send, onHome }: { state: RoomSta
           Back to Home
         </button>
       </div>
+      {nudge && <GuestSheet onDone={onHome} onLater={() => setNudge(false)} />}
     </div>
   );
 }
