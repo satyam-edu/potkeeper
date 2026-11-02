@@ -117,9 +117,12 @@ const SETTLE_ERRORS: Record<string, string> = {
   NOTHING_TO_SETTLE: 'Nobody owes anything in this game',
   NOT_OPEN: 'The settle room is closed. Ask the host to open it again',
   UNAUTHORIZED: 'Please log in again',
+  GOOGLE_ONLY: 'Feedback is for Google accounts. Connect Google first',
+  TOO_MANY: 'That is 5 messages today. Please try again tomorrow',
+  BAD_REQUEST: 'Please write at least a few words',
 };
 
-async function settleCall<T>(s: Session, path: string, body?: unknown): Promise<T> {
+async function apiCall<T>(s: Session, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${s.token}`, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -131,8 +134,10 @@ async function settleCall<T>(s: Session, path: string, body?: unknown): Promise<
   return data;
 }
 
-export const fetchSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, `/api/settlements?gameId=${encodeURIComponent(gameId)}`);
-export const startSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, '/api/settlements', { gameId });
-export const cancelSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, '/api/settlements/cancel', { gameId });
-export const clickReady = (s: Session, gameId: string, ready: boolean) => settleCall<SettleView>(s, '/api/settlements/ready', { gameId, ready });
-export const fetchOpenRooms = async (s: Session) => (await settleCall<{ open: OpenRoom[] }>(s, '/api/settlements')).open;
+export const fetchSettle = (s: Session, gameId: string) => apiCall<SettleView>(s, `/api/settlements?gameId=${encodeURIComponent(gameId)}`);
+export const startSettle = (s: Session, gameId: string) => apiCall<SettleView>(s, '/api/settlements', { gameId });
+export const cancelSettle = (s: Session, gameId: string) => apiCall<SettleView>(s, '/api/settlements/cancel', { gameId });
+export const clickReady = (s: Session, gameId: string, ready: boolean) => apiCall<SettleView>(s, '/api/settlements/ready', { gameId, ready });
+export const fetchOpenRooms = async (s: Session) => (await apiCall<{ open: OpenRoom[] }>(s, '/api/settlements')).open;
+
+export const sendFeedback = (s: Session, message: string) => apiCall<{ ok: true }>(s, '/api/feedback', { message });

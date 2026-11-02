@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { AboutSheet } from '../components/AboutSheet';
+import { FeedbackSheet } from '../components/FeedbackSheet';
 import { GuestSheet } from '../components/GuestSheet';
 import { History } from '../components/History';
+import { MenuButton } from '../components/MenuButton';
 import { NameSheet } from '../components/NameSheet';
 import { WalletCard } from '../components/WalletCard';
 import { checkSession, fetchOpenRooms, loadSession, saveSession, type OpenRoom, type Session } from '../lib/session';
@@ -38,6 +41,8 @@ export function Home() {
     return () => clearTimeout(t);
   }, [cardsDone]);
   const [renaming, setRenaming] = useState(false);
+  const [about, setAbout] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const [nameLockedUntil, setNameLockedUntil] = useState<string | null>(null); // when a Google user may rename again
   const [email, setEmail] = useState<string | null>(null); // Google account, shown on the log out warning
   const dismissed = () => { try { return sessionStorage.getItem('pk_google_later') === '1'; } catch { return false; } };
@@ -68,9 +73,11 @@ export function Home() {
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <img src="/logo.png" alt="PotKeeper" className="h-12 w-12 rounded-xl" />
-        <button className="h-11 rounded-full bg-surface-2 px-4 text-sm font-semibold text-mid" onClick={() => setLogout(true)}>
-          Log out
-        </button>
+        <MenuButton
+          onFeedback={() => (session.isGuest ? setSheet(true) : setFeedback(true))} // a guest is nudged to connect Google instead
+          onAbout={() => setAbout(true)}
+          onLogout={() => setLogout(true)}
+        />
       </div>
       <div>
         <p className="flex items-center gap-2 text-3xl font-light text-mid">
@@ -146,6 +153,8 @@ export function Home() {
           onCancel={() => setLogout(false)}
         />
       )}
+      {about && <AboutSheet onClose={() => setAbout(false)} />}
+      {feedback && !session.isGuest && <FeedbackSheet session={session} onClose={() => setFeedback(false)} />}
       {renaming && (
         <NameSheet
           session={session}

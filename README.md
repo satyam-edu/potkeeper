@@ -87,6 +87,9 @@ To try it on a phone on the same Wi‑Fi, run `npm run dev -- --host` and `npm r
 | `SETTLE_URL` | Room server | Where the room server sends finished games |
 | `MONGODB_URI` | API | MongoDB connection string |
 | `GOOGLE_CLIENT_ID` | API | Google sign in |
+| `RESEND_API_KEY` | API | Sends feedback to your email (free key from resend.com). Optional: without it feedback is only stored |
+| `FEEDBACK_TO` | API | Where feedback emails go (default `feedback.users@gmail.com`) |
+| `FEEDBACK_FROM` | API | Sender shown on the email (default `PotKeeper <feedback@potkeeper.tech>`, the domain verified in Resend) |
 | `VITE_GOOGLE_CLIENT_ID` | App | Google sign in button |
 | `VITE_ROOM_HOST` | App | Room server host in production (in development it follows the page address) |
 
