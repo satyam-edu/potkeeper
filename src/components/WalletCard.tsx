@@ -1,4 +1,5 @@
 import { signed } from '../lib/format';
+import { DealingCards } from './DealingCards';
 
 const cell = 'flex-1 rounded-2xl border border-dashed border-ink/30 px-3 py-2 text-center';
 
@@ -9,7 +10,7 @@ export function WalletCard({ balance, isGuest, onSync }: { balance: number | nul
     <section aria-label="To settle" className="flex flex-col overflow-hidden rounded-[28px]">
       <div className={`px-5 pb-7 pt-5 text-center ${down ? 'bg-danger text-white' : 'bg-neon text-ink'}`}>
         <p className="text-xs font-bold tracking-widest opacity-70">TO SETTLE</p>
-        <p className="amount mt-1 text-6xl leading-none tracking-tight tabular-nums">{balance === null ? '…' : signed(balance)}</p>
+        <p className="amount mt-1 text-6xl leading-none tracking-tight tabular-nums">{balance === null ? <DealingCards label="Loading your balance" /> : signed(balance)}</p>
       </div>
       <span aria-hidden="true" className="amount relative z-10 -my-5 mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lg text-neon">₹</span>
       <div className="flex gap-3 bg-paper p-3 pt-7 text-ink">

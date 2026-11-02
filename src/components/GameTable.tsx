@@ -43,16 +43,9 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const shower = state.players.find((p) => p.userId === state.showBy);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players, meId);
-  // The dealer button sits on the player just before the one who opened the round (they act first, clockwise).
-  const dealerId = (() => {
-    const n = state.players.length;
-    if (state.startIndex < 0 || n === 0) return null;
-    for (let k = 1; k <= n; k++) {
-      const q = state.players[(((state.startIndex - k) % n) + n) % n];
-      if (q && !q.cashedOut) return q.userId;
-    }
-    return null;
-  })();
+  // The D button marks who opened this round (they bet first); it moves on to the next player each round.
+  const opener = state.players[state.startIndex];
+  const dealerId = opener && !opener.cashedOut ? opener.userId : null;
   const seat = (p: (typeof seats)[number], fluid = false) => (
     <SeatCard
       fluid={fluid}

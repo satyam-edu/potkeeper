@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
+import { DealingCards } from '../components/DealingCards';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { rupees, signed } from '../lib/format';
 import { cancelSettle, clickReady, fetchSettle, loadSession, startSettle, type SettleView } from '../lib/session';
@@ -62,7 +63,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
       </div>
 
       {err && <p role="alert" className="rounded-xl bg-danger/15 px-3 py-2 text-sm font-semibold text-danger">{err}</p>}
-      {!view && !err && <p className="text-mid">Loading…</p>}
+      {!view && !err && <div className="flex flex-col items-center gap-1 py-10"><DealingCards size="lg" label="Loading the settle room" /><p className="text-sm text-mid">Loading…</p></div>}
 
       {fresh && <p role="status" className="rounded-xl bg-neon px-3 py-3 text-center font-bold text-ink">Everyone confirmed. Game settled, wallets updated.</p>}
 

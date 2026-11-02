@@ -75,3 +75,18 @@ SettlementSchema.index({ gameId: 1, startedAt: -1 });
 SettlementSchema.index({ 'players.userId': 1, status: 1 });
 
 export const Settlement = (mongoose.models.Settlement ?? mongoose.model('Settlement', SettlementSchema)) as mongoose.Model<any>;
+
+// Feedback from Google users: feature ideas, bugs and plain messages for the developer. Read with scripts/read-feedback.mjs.
+const FeedbackSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    name: String, // snapshot, so the message still says who sent it after a rename
+    email: String,
+    type: { type: String, enum: ['FEATURE', 'BUG', 'MESSAGE'], required: true },
+    message: { type: String, required: true, maxlength: 500 },
+    emailedAt: Date, // set once the email to the developer went out (unset = only stored here)
+  },
+  { timestamps: true },
+);
+
+export const Feedback = (mongoose.models.Feedback ?? mongoose.model('Feedback', FeedbackSchema)) as mongoose.Model<any>;

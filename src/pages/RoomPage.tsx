@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { DealingCards } from '../components/DealingCards';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GameOver } from '../components/GameOver';
 import { GameTable } from '../components/GameTable';
@@ -70,7 +71,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
       </div>
     );
   }
-  if (!state) return <p className="m-auto text-mid">Connecting…</p>;
+  if (!state) return <div className="m-auto flex flex-col items-center gap-2"><DealingCards size="lg" label="Connecting" /><p className="text-mid">Connecting…</p></div>;
 
   if (mine?.cashedOut) {
     return (
@@ -95,7 +96,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
   return (
     <>
       <Toast code={error?.code ?? null} id={error?.id ?? 0} />
-      {!online && <p className="fixed inset-x-0 top-0 z-40 bg-ink py-1 text-center text-sm text-neon">Reconnecting…</p>}
+      {!online && <p className="fixed inset-x-0 top-0 z-40 flex items-center justify-center gap-2 bg-ink text-sm text-neon"><DealingCards size="sm" label="Reconnecting" />Reconnecting…</p>}
       {leaving && inGame && (
         <ConfirmModal
           tone="danger"
@@ -123,7 +124,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
         />
       )}
       {state.phase === 'ENDED' ? (
-        <GameOver state={state} save={save} isHost={state.hostId === session.userId} send={send} onHome={() => go('/')} />
+        <GameOver state={state} save={save} isHost={state.hostId === session.userId} isGuest={session.isGuest} send={send} onHome={() => go('/')} />
       ) : state.phase === 'LOBBY' ? (
         <Lobby state={state} meId={session.userId} send={send} />
       ) : (
