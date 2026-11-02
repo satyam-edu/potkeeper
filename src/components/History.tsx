@@ -37,7 +37,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
               <span className="flex flex-col">
                 <span className="font-bold">{day(g.endedAt)}</span>
                 <span className="text-sm text-mid">{time(g.endedAt)} · {g.rounds} round{g.rounds === 1 ? '' : 's'} · ₹{g.baseBet} base</span>
-                <span className={`mt-1 w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${g.status === 'SETTLED' ? 'bg-surface-2 text-mid' : g.open ? 'bg-neon text-ink' : 'border border-line text-paper'}`}>
+                <span className={`mt-1 w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${g.status === 'SETTLED' ? 'border border-neon text-neon' : g.open ? 'bg-neon text-ink' : 'border border-line text-paper'}`}>
                   {g.status === 'SETTLED' ? '✓ Settled' : g.open ? `Settling ${g.open.ready} of ${g.open.total}` : 'Pending'}
                 </span>
               </span>
@@ -57,7 +57,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
                   </li>
                 ))}
                 <li className="pt-2">
-                  <button onClick={() => go(`/settle/${g.id}`)} className={`h-12 w-full rounded-2xl font-bold ${g.status === 'PENDING' && (g.open || g.canStart) ? 'bg-neon text-ink' : 'bg-surface-2'}`}>
+                  <button onClick={() => go(`/settle/${g.id}`)} className={`h-12 w-full rounded-2xl font-bold ${g.status === 'PENDING' && (g.open || g.canStart) ? 'bg-neon text-ink' : 'btn-quiet'}`}>
                     {g.status === 'SETTLED' ? 'View receipt' : g.open ? 'Open settle room' : g.canStart ? 'Settle this game' : 'See settle status'}
                   </button>
                 </li>
@@ -69,7 +69,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
       {games === null && !failed && <div className="flex flex-col items-center gap-1 py-6"><DealingCards label="Loading your games" /><p className="text-sm text-mid">Loading…</p></div>}
       {failed && <button onClick={() => load(games?.length ? next ?? undefined : undefined)} className="text-sm text-danger underline">Couldn't load history. Tap to retry.</button>}
       {next && !failed && (
-        <button disabled={busy} onClick={() => load(next)} className="mt-3 h-12 w-full rounded-2xl bg-surface-2 font-semibold disabled:opacity-40">Show more</button>
+        <button disabled={busy} onClick={() => load(next)} className="mt-3 h-12 w-full rounded-2xl btn-quiet font-semibold disabled:opacity-40">Show more</button>
       )}
     </section>
   );

@@ -11,7 +11,7 @@ const SAVE_TEXT = {
   failed: "Couldn't save to wallets. Screenshot this screen and tell the host.",
 };
 
-const BTN = 'display h-16 rounded-3xl text-xl font-bold uppercase tracking-wide active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none';
+const BTN = 'display h-16 rounded-3xl text-xl font-bold uppercase tracking-wide active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none';
 
 /** Settle-Up screen (DESIGN 6.6): leaderboard, who pays whom, and whether the wallets were updated. */
 export function GameOver({ state, save, isHost, isGuest, send, onHome }: { state: RoomState; save: keyof typeof SAVE_TEXT; isHost: boolean; isGuest: boolean; send: (m: ClientMessage) => void; onHome: () => void }) {
@@ -73,7 +73,7 @@ export function GameOver({ state, save, isHost, isGuest, send, onHome }: { state
           </>
         )}
         {!isHost && <p className="text-center text-xs text-mid">The host can start a new game or reopen this one.</p>}
-        <button onClick={onHome} className={isHost ? 'h-14 rounded-2xl bg-surface-2 font-semibold' : `${BTN} h-16 bg-neon text-ink shadow-[0_4px_0_var(--color-neon-dim)]`}>
+        <button onClick={onHome} className={isHost ? 'h-14 rounded-2xl btn-quiet font-semibold' : `${BTN} h-16 bg-neon text-ink shadow-[0_4px_0_var(--color-neon-dim)]`}>
           Back to Home
         </button>
       </div>

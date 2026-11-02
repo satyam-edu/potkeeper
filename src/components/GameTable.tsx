@@ -69,9 +69,9 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           <span className="text-xs font-semibold text-mid">R{state.roundNumber}</span>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full bg-surface-2 font-bold text-neon">?</button>
+          <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full btn-quiet font-bold text-neon">?</button>
           {isHost && (<>
-            <button disabled={state.historyStack.length === 0} onClick={() => send({ t: 'UNDO' })} className="h-9 rounded-full bg-surface-2 px-4 text-sm font-bold disabled:opacity-40">↶ Undo</button>
+            <button disabled={state.historyStack.length === 0} onClick={() => send({ t: 'UNDO' })} className="h-9 rounded-full btn-quiet px-4 text-sm font-bold disabled:opacity-40">↶ Undo</button>
             <button onClick={() => setConfirm({ kind: 'end' })} className="h-9 rounded-full bg-danger px-4 text-sm font-bold">End</button>
           </>)}
         </div>

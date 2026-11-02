@@ -53,7 +53,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
   return (
     <div className="flex flex-1 flex-col gap-4 pb-2">
       <div className="flex items-center gap-3">
-        <button onClick={() => go('/')} aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-2">
+        <button onClick={() => go('/')} aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-full btn-quiet">
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
         </button>
         <div className="min-w-0">
@@ -145,7 +145,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
       <div className="mt-auto flex flex-col gap-2 pt-2">
         {open && me && (
           me.readyAt ? (
-            <button disabled={busy} onClick={() => run(() => clickReady(session, gameId, false))} className="h-14 rounded-2xl bg-surface-2 font-semibold disabled:opacity-40">
+            <button disabled={busy} onClick={() => run(() => clickReady(session, gameId, false))} className="h-14 rounded-2xl btn-quiet font-semibold disabled:opacity-40">
               ✓ You confirmed. Tap to take it back
             </button>
           ) : (
@@ -161,7 +161,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
           </button>
         )}
         {open && view?.canStart && (
-          <button disabled={busy} onClick={() => setConfirm('cancel')} className="h-12 rounded-2xl bg-surface-2 text-sm font-semibold text-mid disabled:opacity-40">Cancel the settle room</button>
+          <button disabled={busy} onClick={() => setConfirm('cancel')} className="h-12 rounded-2xl btn-quiet text-sm font-semibold disabled:opacity-40">Cancel the settle room</button>
         )}
       </div>
 

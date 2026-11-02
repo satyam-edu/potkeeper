@@ -45,10 +45,10 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
         <p className="display text-6xl font-bold tracking-widest text-neon tabular-nums">{state.code}</p>
         <p className="mt-1 truncate text-sm text-mid">{link}</p>
         <div className="mt-3 flex gap-2">
-          <button onClick={copy} className="h-12 flex-1 rounded-xl bg-surface-2 font-bold active:scale-[.98]">
+          <button onClick={copy} className="h-12 flex-1 rounded-xl btn-quiet font-bold active:scale-[.98]">
             {copied ? 'Copied ✓' : 'Copy link'}
           </button>
-          <button onClick={toggleQr} className="h-12 flex-1 rounded-xl bg-surface-2 font-bold active:scale-[.98]">
+          <button onClick={toggleQr} className="h-12 flex-1 rounded-xl btn-quiet font-bold active:scale-[.98]">
             {qr ? 'Hide QR' : 'Show QR'}
           </button>
         </div>
@@ -89,8 +89,8 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
               </span>
               {isHost && (
                 <span className="flex gap-1">
-                  <button aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▲</button>
-                  <button aria-label={`Move ${p.name} down`} disabled={i === live.length - 1} onClick={() => move(i, 1)} className="h-10 w-10 rounded-lg bg-surface-2 disabled:opacity-30">▼</button>
+                  <button aria-label={`Move ${p.name} up`} disabled={i === 0} onClick={() => move(i, -1)} className="h-10 w-10 rounded-lg btn-quiet disabled:opacity-30">▲</button>
+                  <button aria-label={`Move ${p.name} down`} disabled={i === live.length - 1} onClick={() => move(i, 1)} className="h-10 w-10 rounded-lg btn-quiet disabled:opacity-30">▼</button>
                   {p.userId !== meId && <button aria-label={`Remove ${p.name}`} onClick={() => setRemoving(p)} className="h-10 w-10 rounded-lg bg-danger font-bold">✕</button>}
                 </span>
               )}
@@ -103,7 +103,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
         <button
           disabled={live.length < MIN_PLAYERS}
           onClick={() => send({ t: 'START_ROUND' })}
-          className="h-16 rounded-2xl bg-neon display text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none"
+          className="h-16 rounded-2xl bg-neon display text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none"
         >
           {live.length < MIN_PLAYERS ? 'Waiting for players…' : 'Start Game'}
         </button>

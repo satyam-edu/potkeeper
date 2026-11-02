@@ -60,11 +60,11 @@ export function NameSheet({ session, lockedUntil, onDone, onClose }: { session: 
 
         <div className="flex flex-col gap-2">
           {!locked && (
-            <button disabled={!clean || clean === session.name || busy} className="display h-14 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none">
+            <button disabled={!clean || clean === session.name || busy} className="display h-14 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none">
               {busy ? 'Saving…' : 'Save name'}
             </button>
           )}
-          <button type="button" onClick={onClose} className="h-12 rounded-2xl bg-surface-2 font-semibold active:scale-[.98]">{locked ? 'Close' : 'Cancel'}</button>
+          <button type="button" onClick={onClose} className="h-12 rounded-2xl btn-quiet font-semibold active:scale-[.98]">{locked ? 'Close' : 'Cancel'}</button>
         </div>
       </form>
     </div>

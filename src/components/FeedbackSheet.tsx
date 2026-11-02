@@ -55,10 +55,10 @@ export function FeedbackSheet({ session, onClose }: { session: Session; onClose:
               <span className="self-end text-xs tabular-nums text-mid">{text.length}/{MAX}</span>
             </label>
             {err && <p role="alert" className="rounded-xl bg-danger/15 px-3 py-2 text-sm font-semibold text-danger">{err}</p>}
-            <button disabled={clean.length < 3 || busy} className="display h-14 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none">
+            <button disabled={clean.length < 3 || busy} className="display h-14 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none">
               {busy ? 'Sending…' : 'Send'}
             </button>
-            <button type="button" onClick={onClose} className="h-12 rounded-2xl bg-surface-2 font-semibold">Cancel</button>
+            <button type="button" onClick={onClose} className="h-12 rounded-2xl btn-quiet font-semibold">Cancel</button>
           </>
         )}
       </form>

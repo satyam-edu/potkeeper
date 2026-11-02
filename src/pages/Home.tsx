@@ -83,7 +83,7 @@ export function Home() {
         <p className="flex items-center gap-2 text-3xl font-light text-mid">
           <span className="min-w-0 [overflow-wrap:anywhere]">Hi, {session.name}</span>
           {!session.isGuest && (
-            <button onClick={() => setRenaming(true)} aria-label="Change name" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-neon active:scale-95">
+            <button onClick={() => setRenaming(true)} aria-label="Change name" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full btn-quiet text-neon active:scale-95">
               <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
@@ -100,7 +100,7 @@ export function Home() {
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`h-11 rounded-full px-6 text-sm font-bold capitalize ${tab === t ? 'bg-neon text-ink' : 'bg-surface-2 text-mid'}`}
+            className={`h-11 rounded-full px-6 text-sm font-bold capitalize ${tab === t ? 'bg-neon text-ink' : 'btn-quiet'}`}
           >
             {t}
           </button>
@@ -132,7 +132,7 @@ export function Home() {
             aria-label="Room code"
             className="h-full min-w-0 flex-1 bg-transparent text-lg tabular-nums outline-none"
           />
-          <button disabled={code.length !== 4} aria-label="Join room" className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-ink disabled:bg-surface-2 disabled:text-mid">
+          <button disabled={code.length !== 4} aria-label="Join room" className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-ink disabled:opacity-40">
             <Arrow />
           </button>
         </form>

@@ -187,3 +187,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .letter-pop, .fade, .sheet-up { animation: none; }
 }
+
+/* Buttons stay in the theme: neon for the main action, a white outline for the quiet ones (never grey). Disabled = the same button, dimmed. */
+.btn-quiet {
+  background: transparent;
+  border: 1.5px solid rgba(242, 242, 242, 0.6);
+}
+.btn-quiet:active:not(:disabled) {
+  background: #f2f2f2;
+  color: #0a0a0a;
+}

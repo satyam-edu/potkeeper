@@ -74,7 +74,7 @@ export function Landing({ onDone }: { onDone: (s: Session) => void }) {
               A guest account stays on this phone only. If you log out or clear your browser, your balance and games are gone. You can connect Google later to keep them.
             </p>
             <NamePrompt onDone={onDone} label="Play as Guest" autoFocus={false} />
-            <button onClick={() => setGuest(false)} className="mt-3 h-12 w-full rounded-2xl bg-surface-2 font-semibold">Back to Google</button>
+            <button onClick={() => setGuest(false)} className="mt-3 h-12 w-full rounded-2xl btn-quiet font-semibold">Back to Google</button>
           </div>
         </div>
       )}

@@ -26,7 +26,7 @@ export function NamePrompt({ onDone, label = 'Continue', autoFocus = true }: { o
         className="h-14 rounded-xl bg-surface px-4 text-lg outline-none ring-neon focus:ring-2"
       />
       {err && <p className="text-sm text-red-400">{err}</p>}
-      <button disabled={!name.trim() || busy} className="h-14 rounded-xl bg-neon text-lg font-extrabold text-ink disabled:bg-surface-2 disabled:text-mid">
+      <button disabled={!name.trim() || busy} className="h-14 rounded-xl bg-neon text-lg font-extrabold text-ink disabled:opacity-40">
         {label}
       </button>
     </form>

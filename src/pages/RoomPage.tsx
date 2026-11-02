@@ -67,7 +67,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p className="text-xl font-bold">Room {code} not found</p>
         <p className="text-mid">Check the code with the host.</p>
-        <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
+        <button onClick={() => go('/')} className="h-12 rounded-xl btn-quiet px-6 font-bold">Back</button>
       </div>
     );
   }
@@ -86,7 +86,7 @@ function Connected({ code, session, onBadToken }: { code: string; session: Sessi
             <button onClick={() => send({ t: 'REQUEST_REJOIN' })} className="h-12 rounded-xl bg-neon px-6 font-bold text-ink">Ask to rejoin</button>
           )
         )}
-        <button onClick={() => go('/')} className="h-12 rounded-xl bg-surface-2 px-6 font-bold">Back</button>
+        <button onClick={() => go('/')} className="h-12 rounded-xl btn-quiet px-6 font-bold">Back</button>
       </div>
     );
   }

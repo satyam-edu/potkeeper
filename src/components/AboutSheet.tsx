@@ -31,7 +31,7 @@ export function AboutSheet({ onClose }: { onClose: () => void }) {
           <p className="display text-3xl font-bold leading-tight">SATYAM</p>
           <p className="text-sm font-semibold">Developer, tester, and the person who has now lost to his own app more than once.</p>
         </div>
-        <button onClick={onClose} className="mt-4 h-12 w-full rounded-2xl bg-surface-2 font-semibold">Close</button>
+        <button onClick={onClose} className="mt-4 h-12 w-full rounded-2xl btn-quiet font-semibold">Close</button>
       </div>
     </div>
   );
