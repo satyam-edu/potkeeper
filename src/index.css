@@ -76,6 +76,20 @@ body {
   .pop { animation: none; }
 }
 
+/* Wallet loading: three cards turn over one after another (3 Patti). */
+@keyframes card-flip {
+  0%, 35% { transform: rotateY(0deg); }
+  50%, 85% { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+.card-flip {
+  transform-style: preserve-3d;
+  animation: card-flip 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-flip { animation: none; }
+}
+
 /* Felt for the game table: dark green with a faint suit pattern. */
 .felt {
   background-color: #0b5a37;

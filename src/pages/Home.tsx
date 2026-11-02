@@ -16,6 +16,11 @@ function Arrow() {
   );
 }
 
+// Last balance seen, kept only while the page stays open (not saved anywhere). Coming back to Home from a room shows it at once and
+// refreshes it; a refresh or hard load starts empty, so the cards animation plays once while the real number is fetched.
+let lastWallet: { userId: string; balance: number } | null = null;
+const CARDS_MIN_MS = 2200; // one whole round of the card flip (1.8s + the last card's 0.36s delay, see card-flip in index.css), so all three cards finish before the number appears
+
 const newCode = () => String(1000 + Math.floor(Math.random() * 9000));
 
 export function Home() {
@@ -25,7 +30,13 @@ export function Home() {
   const [logout, setLogout] = useState(false);
   const [tab, setTab] = useState<'play' | 'history' | 'settled'>('play');
   const [rooms, setRooms] = useState<OpenRoom[]>([]); // settle rooms waiting on me
-  const [wallet, setWallet] = useState<number | null>(null);
+  const [wallet, setWallet] = useState<number | null>(() => (lastWallet && lastWallet.userId === session?.userId ? lastWallet.balance : null));
+  const [cardsDone, setCardsDone] = useState(wallet !== null); // false only on a fresh load, until the minimum time has passed
+  useEffect(() => {
+    if (cardsDone) return;
+    const t = setTimeout(() => setCardsDone(true), CARDS_MIN_MS);
+    return () => clearTimeout(t);
+  }, [cardsDone]);
   const [renaming, setRenaming] = useState(false);
   const [nameLockedUntil, setNameLockedUntil] = useState<string | null>(null); // when a Google user may rename again
   const [email, setEmail] = useState<string | null>(null); // Google account, shown on the log out warning
@@ -40,8 +51,8 @@ export function Home() {
   useEffect(() => {
     if (!session) return;
     void checkSession(session).then((me) => {
-      if (me) { setWallet(me.walletBalance); setEmail(me.email ?? null); setNameLockedUntil(me.nextNameChange); }
-      if (me === false) { saveSession(null); setSession(null); }
+      if (me) { setWallet(me.walletBalance); lastWallet = { userId: session.userId, balance: me.walletBalance }; setEmail(me.email ?? null); setNameLockedUntil(me.nextNameChange); }
+      if (me === false) { lastWallet = null; saveSession(null); setSession(null); }
       else if (me && (me.isGuest !== session.isGuest || me.name !== session.name)) {
         const next = { ...session, isGuest: me.isGuest, name: me.name };
         saveSession(next);
@@ -74,7 +85,7 @@ export function Home() {
         </p>
         <h1 className="display title-fade text-[clamp(3.25rem,19vw,4.75rem)] font-bold leading-[0.95]">PotKeeper</h1>
       </div>
-      <WalletCard balance={wallet} isGuest={session.isGuest} onSync={() => setSheet(true)} />
+      <WalletCard balance={cardsDone ? wallet : null} isGuest={session.isGuest} onSync={() => setSheet(true)} />
       <div role="tablist" className="flex gap-2">
         {(['play', 'history', 'settled'] as const).map((t) => (
           <button
@@ -131,7 +142,7 @@ export function Home() {
             ? "You are playing as a guest. If you log out, this guest wallet and its history can't be opened again. Sync Google first if you want to keep them."
             : `${email ? `You are logged in with Google as ${email}. ` : ''}You will be logged out on this device. Log in with Google again to get your wallet and history back.`}
           confirmLabel="Log out"
-          onConfirm={() => { setLogout(false); saveSession(null); setSession(null); }}
+          onConfirm={() => { setLogout(false); lastWallet = null; saveSession(null); setSession(null); }}
           onCancel={() => setLogout(false)}
         />
       )}
