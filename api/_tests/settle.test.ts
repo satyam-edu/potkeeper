@@ -5,7 +5,7 @@ import { connectDb } from '../_lib/db';
 import { GameSession, User } from '../_lib/models';
 import { signInWithGoogle } from '../_lib/accounts';
 import { parseSettle } from '../_lib/settle';
-import { POST } from './settle';
+import { POST } from '../games/settle';
 
 try { process.loadEnvFile('.env'); } catch { /* no .env: live tests are skipped */ }
 const live = !!process.env.MONGODB_URI;
