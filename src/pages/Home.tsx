@@ -5,7 +5,7 @@ import { GuestSheet } from '../components/GuestSheet';
 import { History } from '../components/History';
 import { NameSheet } from '../components/NameSheet';
 import { WalletCard } from '../components/WalletCard';
-import { checkSession, loadSession, saveSession, type Session } from '../lib/session';
+import { checkSession, fetchOpenRooms, loadSession, saveSession, type OpenRoom, type Session } from '../lib/session';
 import { Landing } from './Landing';
 
 function Arrow() {
@@ -23,7 +23,8 @@ export function Home() {
   const [session, setSession] = useState<Session | null>(loadSession);
   const [code, setCode] = useState('');
   const [logout, setLogout] = useState(false);
-  const [tab, setTab] = useState<'play' | 'history'>('play');
+  const [tab, setTab] = useState<'play' | 'history' | 'settled'>('play');
+  const [rooms, setRooms] = useState<OpenRoom[]>([]); // settle rooms waiting on me
   const [wallet, setWallet] = useState<number | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [nameLockedUntil, setNameLockedUntil] = useState<string | null>(null); // when a Google user may rename again
@@ -47,6 +48,7 @@ export function Home() {
         setSession(next);
       }
     });
+    void fetchOpenRooms(session).then(setRooms).catch(() => setRooms([])); // just no banner if it fails
   }, [session?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!session) return <Landing onDone={setSession} />;
@@ -74,7 +76,7 @@ export function Home() {
       </div>
       <WalletCard balance={wallet} isGuest={session.isGuest} onSync={() => setSheet(true)} />
       <div role="tablist" className="flex gap-2">
-        {(['play', 'history'] as const).map((t) => (
+        {(['play', 'history', 'settled'] as const).map((t) => (
           <button
             key={t}
             role="tab"
@@ -87,6 +89,15 @@ export function Home() {
         ))}
       </div>
       <div hidden={tab !== 'play'} className="flex flex-col gap-3">
+        {rooms.map((r) => (
+          <button key={r.gameId} onClick={() => go(`/settle/${r.gameId}`)} className="flex items-center justify-between rounded-2xl border-2 border-neon bg-surface px-4 py-3 text-left active:scale-[.98]">
+            <span className="flex flex-col">
+              <span className="font-bold">{r.mineReady ? 'Waiting for the others' : 'Settle room is open'}</span>
+              <span className="text-sm text-mid">{new Date(r.endedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} game · {r.ready} of {r.total} confirmed</span>
+            </span>
+            <span className="rounded-full bg-neon px-3 py-1.5 text-sm font-bold text-ink">Open</span>
+          </button>
+        ))}
         <button
           onClick={() => go(`/room/${newCode()}?create=5`)}
           className="display flex h-16 items-center justify-between rounded-full bg-neon pl-7 pr-2 text-2xl font-bold text-ink active:scale-[.98]"
@@ -111,6 +122,7 @@ export function Home() {
       <div hidden={tab !== 'history'}>
         <History session={session} />
       </div>
+      {tab === 'settled' && <History session={session} settledOnly />}
       {logout && (
         <ConfirmModal
           tone="danger"

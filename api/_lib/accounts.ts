@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { GameSession, User } from './models.js';
+import { GameSession, Settlement, User } from './models.js';
 
 export interface GoogleProfile {
   googleId: string;
@@ -39,6 +39,17 @@ export async function signInWithGoogle(profile: GoogleProfile, guestId?: string)
           { $set: { 'players.$[p].userId': existing._id } },
           { arrayFilters: [{ 'p.userId': guest._id }], session },
         );
+        await GameSession.updateMany({ hostId: guest._id }, { $set: { hostId: existing._id } }, { session });
+        // Settle rooms follow the player too (their click, their place in the list, who opened it).
+        await Settlement.updateMany(
+          { 'players.userId': guest._id },
+          { $set: { 'players.$[p].userId': existing._id } },
+          { arrayFilters: [{ 'p.userId': guest._id }], session },
+        );
+        for (const side of ['from', 'to'] as const) {
+          await Settlement.updateMany({ [`payments.${side}`]: guest._id }, { $set: { [`payments.$[p].${side}`]: existing._id } }, { arrayFilters: [{ [`p.${side}`]: guest._id }], session });
+        }
+        await Settlement.updateMany({ startedBy: guest._id }, { $set: { startedBy: existing._id } }, { session });
         await User.updateOne({ _id: guest._id }, { $set: { walletBalance: 0, mergedInto: existing._id } }, { session });
       });
     } finally {

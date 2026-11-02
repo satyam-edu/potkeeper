@@ -2,13 +2,13 @@ import { signed } from '../lib/format';
 
 const cell = 'flex-1 rounded-2xl border border-dashed border-ink/30 px-3 py-2 text-center';
 
-/** Lifetime wallet: lime when you're up, red when you're down. Guests get a nudge to sync Google. */
+/** What is still to settle: lime when you're owed, red when you owe. A game drops out once it is settled. Guests get a nudge to sync Google. */
 export function WalletCard({ balance, isGuest, onSync }: { balance: number | null; isGuest: boolean; onSync: () => void }) {
   const down = balance !== null && balance < 0;
   return (
-    <section aria-label="Lifetime wallet" className="flex flex-col overflow-hidden rounded-[28px]">
+    <section aria-label="To settle" className="flex flex-col overflow-hidden rounded-[28px]">
       <div className={`px-5 pb-7 pt-5 text-center ${down ? 'bg-danger text-white' : 'bg-neon text-ink'}`}>
-        <p className="text-xs font-bold tracking-widest opacity-70">LIFETIME WALLET</p>
+        <p className="text-xs font-bold tracking-widest opacity-70">TO SETTLE</p>
         <p className="amount mt-1 text-6xl leading-none tracking-tight tabular-nums">{balance === null ? '…' : signed(balance)}</p>
       </div>
       <span aria-hidden="true" className="amount relative z-10 -my-5 mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lg text-neon">₹</span>
