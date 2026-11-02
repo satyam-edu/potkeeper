@@ -5,6 +5,16 @@ import { User } from './models.js';
 
 export const TOKEN_DAYS = 90;
 export const NAME_MAX = 24;
+export const NAME_COOLDOWN_DAYS = 7;
+const NAME_COOLDOWN_MS = NAME_COOLDOWN_DAYS * 86400_000;
+
+/** When the next rename is allowed, or null if one is allowed now. */
+export function nextNameChange(nameChangedAt: Date | null | undefined, now = Date.now()): string | null {
+  if (!nameChangedAt) return null;
+  const at = nameChangedAt.getTime() + NAME_COOLDOWN_MS;
+  return at > now ? new Date(at).toISOString() : null;
+}
+export const nameCooldownCutoff = (now = Date.now()) => new Date(now - NAME_COOLDOWN_MS);
 
 /** Trim + collapse spaces; null if empty. Names are only ever rendered as text, never as HTML. */
 export function cleanName(raw: unknown): string | null {

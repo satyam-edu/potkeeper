@@ -6,6 +6,7 @@ const UserSchema = new Schema(
     email: { type: String, unique: true, sparse: true },
     name: { type: String, required: true, trim: true, maxlength: 24 },
     avatarUrl: String,
+    nameChangedAt: Date, // last time a Google user renamed themselves (one change per NAME_COOLDOWN_DAYS)
     isGuest: { type: Boolean, default: true },
     walletBalance: { type: Number, default: 0, validate: Number.isInteger }, // lifetime net ₹
     mergedInto: { type: Schema.Types.ObjectId, ref: 'User' }, // tombstone after a guest→Google merge

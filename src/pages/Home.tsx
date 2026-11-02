@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { GuestSheet } from '../components/GuestSheet';
 import { History } from '../components/History';
+import { NameSheet } from '../components/NameSheet';
 import { WalletCard } from '../components/WalletCard';
 import { checkSession, loadSession, saveSession, type Session } from '../lib/session';
 import { Landing } from './Landing';
@@ -24,6 +25,8 @@ export function Home() {
   const [logout, setLogout] = useState(false);
   const [tab, setTab] = useState<'play' | 'history'>('play');
   const [wallet, setWallet] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [nameLockedUntil, setNameLockedUntil] = useState<string | null>(null); // when a Google user may rename again
   const [email, setEmail] = useState<string | null>(null); // Google account, shown on the log out warning
   const dismissed = () => { try { return sessionStorage.getItem('pk_google_later') === '1'; } catch { return false; } };
   const [sheet, setSheet] = useState(() => !dismissed()); // shown once per browser session unless Google is connected
@@ -36,7 +39,7 @@ export function Home() {
   useEffect(() => {
     if (!session) return;
     void checkSession(session).then((me) => {
-      if (me) { setWallet(me.walletBalance); setEmail(me.email ?? null); }
+      if (me) { setWallet(me.walletBalance); setEmail(me.email ?? null); setNameLockedUntil(me.nextNameChange); }
       if (me === false) { saveSession(null); setSession(null); }
       else if (me && (me.isGuest !== session.isGuest || me.name !== session.name)) {
         const next = { ...session, isGuest: me.isGuest, name: me.name };
@@ -57,7 +60,16 @@ export function Home() {
         </button>
       </div>
       <div>
-        <p className="text-3xl font-light text-mid">Hi, {session.name}</p>
+        <p className="flex items-center gap-2 text-3xl font-light text-mid">
+          <span className="min-w-0 [overflow-wrap:anywhere]">Hi, {session.name}</span>
+          {!session.isGuest && (
+            <button onClick={() => setRenaming(true)} aria-label="Change name" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-neon active:scale-95">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          )}
+        </p>
         <h1 className="display title-fade text-[clamp(3.25rem,19vw,4.75rem)] font-bold leading-[0.95]">PotKeeper</h1>
       </div>
       <WalletCard balance={wallet} isGuest={session.isGuest} onSync={() => setSheet(true)} />
@@ -109,6 +121,14 @@ export function Home() {
           confirmLabel="Log out"
           onConfirm={() => { setLogout(false); saveSession(null); setSession(null); }}
           onCancel={() => setLogout(false)}
+        />
+      )}
+      {renaming && (
+        <NameSheet
+          session={session}
+          lockedUntil={nameLockedUntil}
+          onDone={(s, next) => { setSession(s); setNameLockedUntil(next); setRenaming(false); }}
+          onClose={() => setRenaming(false)}
         />
       )}
       {session.isGuest && sheet && <GuestSheet onDone={(s) => { setSession(s); setSheet(false); }} onLater={later} />}
