@@ -95,3 +95,65 @@ body {
   background-color: #0b5a37;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='white' fill-opacity='.07' font-size='20' font-family='Arial,sans-serif'%3E%3Ctext x='8' y='24'%3E%26%239824;%3C/text%3E%3Ctext x='40' y='24'%3E%26%239829;%3C/text%3E%3Ctext x='8' y='56'%3E%26%239830;%3C/text%3E%3Ctext x='40' y='56'%3E%26%239827;%3C/text%3E%3C/g%3E%3C/svg%3E");
 }
+
+/* Landing page: things rise in one after another, three cards are dealt and turn over, faint suits drift up behind it all. */
+@keyframes rise {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.rise {
+  animation: rise 0.6s ease-out both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes deal {
+  from { transform: translate(0, 200px) rotate(0deg) scale(0.5); opacity: 0; }
+  to { transform: translate(var(--x), 0) rotate(var(--r)) scale(1); opacity: 1; }
+}
+.deal-card {
+  transform: translate(var(--x), 0) rotate(var(--r));
+  animation: deal 0.75s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes flip-up {
+  from { transform: rotateY(180deg); }
+  to { transform: rotateY(0deg); }
+}
+.flip-card {
+  transform-style: preserve-3d;
+  animation: flip-up 0.6s ease-out both;
+  animation-delay: calc(var(--d, 0s) + 1s);
+}
+@keyframes bob {
+  50% { transform: translateY(-7px); }
+}
+.bob {
+  animation: bob 4s ease-in-out 2.4s infinite;
+}
+@keyframes shine {
+  from { transform: translateX(-130%); }
+  60%, to { transform: translateX(130%); }
+}
+.shine { overflow: hidden; } /* the badge is already absolute, which is what the ::after sweep needs */
+.shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: shine 3.2s ease-in-out 1.6s infinite;
+}
+@keyframes drift {
+  from { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%, 85% { opacity: 1; }
+  to { transform: translateY(-115vh) rotate(200deg); opacity: 0; }
+}
+.suit-drift {
+  position: absolute;
+  top: 105vh;
+  animation: drift var(--t, 16s) linear var(--d, 0s) infinite both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .deal-card, .flip-card, .bob { animation: none; }
+  .shine::after { animation: none; display: none; }
+  .suit-drift { display: none; }
+}
