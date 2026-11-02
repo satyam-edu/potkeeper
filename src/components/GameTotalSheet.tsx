@@ -44,7 +44,7 @@ export function GameTotalSheet({ state, meId, onClose }: { state: RoomState; meI
             </ol>
           )}
         </div>
-        <button onClick={onClose} className="mt-4 h-12 shrink-0 rounded-2xl bg-surface-2 font-semibold">Close</button>
+        <button onClick={onClose} className="mt-4 h-12 shrink-0 rounded-2xl bg-neon font-bold text-ink active:scale-[.98]">Close</button>
       </div>
     </div>
   );
