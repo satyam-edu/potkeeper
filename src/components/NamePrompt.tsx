@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { guestLogin, type Session } from '../lib/session';
 
 /** Name-only guest entry. The Google option joins it on the Landing page (P3-03). */
-export function NamePrompt({ onDone, label = 'Continue' }: { onDone: (s: Session) => void; label?: string }) {
+export function NamePrompt({ onDone, label = 'Continue', autoFocus = true }: { onDone: (s: Session) => void; label?: string; autoFocus?: boolean }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -22,7 +22,7 @@ export function NamePrompt({ onDone, label = 'Continue' }: { onDone: (s: Session
         onChange={(e) => setName(e.target.value)}
         maxLength={24}
         placeholder="Your name"
-        autoFocus
+        autoFocus={autoFocus}
         className="h-14 rounded-xl bg-surface px-4 text-lg outline-none ring-neon focus:ring-2"
       />
       {err && <p className="text-sm text-red-400">{err}</p>}
