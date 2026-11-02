@@ -14,7 +14,7 @@ export function GuestSheet({ onDone, onLater, balance }: { onDone: (s: Session) 
           Connect Google so your balance and games are never lost, even if you change phone or clear your browser.
         </p>
         <GoogleButton onDone={onDone} />
-        <button onClick={onLater} className="mt-3 h-12 w-full rounded-2xl bg-surface-2 font-semibold">Maybe later</button>
+        <button onClick={onLater} className="mt-3 h-12 w-full rounded-2xl btn-quiet font-semibold">Maybe later</button>
       </div>
     </div>
   );

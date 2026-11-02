@@ -14,11 +14,11 @@ export function MenuButton({ onFeedback, onAbout, onLogout }: { onFeedback: () =
     return () => document.removeEventListener('keydown', esc);
   }, [open]);
   const pick = (fn: () => void) => () => { setOpen(false); fn(); };
-  const item = 'flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-semibold active:bg-surface-2';
+  const item = 'flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-semibold active:bg-neon active:text-ink';
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} aria-label="Menu" aria-haspopup="menu" aria-expanded={open} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-2 text-paper active:scale-95">
+      <button onClick={() => setOpen((o) => !o)} aria-label="Menu" aria-haspopup="menu" aria-expanded={open} className="flex h-11 w-11 items-center justify-center rounded-full btn-quiet text-paper active:scale-95">
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="currentColor"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
       </button>
       {open && (

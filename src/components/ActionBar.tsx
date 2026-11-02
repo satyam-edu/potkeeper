@@ -3,7 +3,7 @@ import { say } from '../lib/sound';
 
 const buzz = () => navigator.vibrate?.(10);
 
-const base = 'display h-16 rounded-3xl text-2xl font-bold active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none';
+const base = 'display h-16 rounded-3xl text-2xl font-bold active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none';
 
 /** PACK / SHOW / BET in the thumb zone. Only enabled on your turn. */
 export function ActionBar({ canAct, level, onBet, onPack, onShow }: { canAct: boolean; level: number; onBet: () => void; onPack: () => void; onShow: () => void }) {

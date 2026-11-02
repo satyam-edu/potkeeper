@@ -32,7 +32,7 @@ export function ShowdownModal({ pot, topUp, active, by, canPick, onAward, onClos
             <h2 className="display text-3xl font-bold">Who won?</h2>
             <span className="flex items-center gap-2">
               <span className="display text-2xl font-bold text-neon tabular-nums">{rupees(pot)}</span>
-              <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full bg-surface-2 font-bold text-neon">?</button>
+              <button onClick={() => setRules(true)} aria-label="Hand rules" className="h-9 w-9 rounded-full btn-quiet font-bold text-neon">?</button>
             </span>
           </div>
           <p className="mt-1 text-sm text-mid">{by} called show</p>
@@ -45,7 +45,7 @@ export function ShowdownModal({ pot, topUp, active, by, canPick, onAward, onClos
                     onClick={() => toggle(p.userId)}
                     disabled={!canPick}
                     aria-pressed={on}
-                    className={`flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-left font-semibold ${on ? 'bg-paper text-ink' : 'bg-surface-2'}`}
+                    className={`flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-left font-semibold ${on ? 'bg-paper text-ink' : 'btn-quiet'}`}
                   >
                     <span className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-sm ${on ? 'border-ink bg-neon' : 'border-mid'}`}>{on && '✓'}</span>
                     {p.name}
@@ -57,11 +57,11 @@ export function ShowdownModal({ pot, topUp, active, by, canPick, onAward, onClos
           {topUp > 0 && <p className="-mt-2 mb-2 text-center text-xs text-mid">Includes {rupees(topUp)} from players matching the current bet</p>}
           <p className="mb-3 min-h-5 text-center text-sm text-mid" aria-live="polite">{preview}</p>
           <div className="flex gap-3">
-            {onClose && <button onClick={onClose} className="h-14 basis-1/3 rounded-2xl bg-surface-2 font-semibold">Cancel show</button>}
+            {onClose && <button onClick={onClose} className="h-14 basis-1/3 rounded-2xl btn-quiet font-semibold">Cancel show</button>}
             {canPick && <button
               disabled={winners.length === 0}
               onClick={() => setConfirming(true)}
-              className="display h-14 flex-1 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:bg-surface-2 disabled:text-mid disabled:shadow-none"
+              className="display h-14 flex-1 rounded-2xl bg-neon text-xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:opacity-40 disabled:shadow-none"
             >
               Award Pot
             </button>}

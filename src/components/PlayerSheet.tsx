@@ -17,7 +17,7 @@ export function PlayerSheet({ p, onTransfer, onRemove, onClose }: { p: Player; o
         <div className="flex flex-col gap-2">
           <button onClick={onTransfer} className="h-14 rounded-2xl bg-paper font-bold text-ink active:scale-[.98]">Make host</button>
           <button onClick={onRemove} className="h-14 rounded-2xl bg-danger font-bold text-white active:scale-[.98]">Cash out / remove</button>
-          <button onClick={onClose} className="h-12 rounded-2xl bg-surface-2 font-semibold">Close</button>
+          <button onClick={onClose} className="h-12 rounded-2xl btn-quiet font-semibold">Close</button>
         </div>
       </div>
     </div>

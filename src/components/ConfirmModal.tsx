@@ -48,7 +48,7 @@ export function ConfirmModal({
           <button onClick={onConfirm} className={`display h-14 rounded-2xl text-xl font-bold active:scale-[.98] ${TONE[tone]}`}>
             {confirmLabel}
           </button>
-          <button ref={cancelRef} onClick={onCancel} className="h-12 rounded-2xl bg-surface-2 font-semibold active:scale-[.98]">
+          <button ref={cancelRef} onClick={onCancel} className="h-12 rounded-2xl btn-quiet font-semibold active:scale-[.98]">
             {cancelLabel}
           </button>
         </div>
