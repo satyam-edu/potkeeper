@@ -21,14 +21,15 @@ const SUITS = [
 
 /** First screen for anyone without a saved session. Google is the loud, recommended way in; the guest option is there but quiet and says what it costs. */
 export function Landing({ onDone }: { onDone: (s: Session) => void }) {
-  // The guest form opens below the fold on a phone: slide down to it, then put the cursor in the name box.
+  // The guest form is a bottom sheet: it slides up over the page, then the cursor goes into the name box.
   const [guest, setGuest] = useState(false);
-  const form = useRef<HTMLDivElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!guest) return;
-    const slide = setTimeout(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }), 60);
-    const focus = setTimeout(() => form.current?.querySelector('input')?.focus({ preventScroll: true }), 650); // after the slide; a phone may still wait for a tap
-    return () => { clearTimeout(slide); clearTimeout(focus); };
+    const focus = setTimeout(() => sheet.current?.querySelector('input')?.focus({ preventScroll: true }), 400); // after it has slid up; a phone may still wait for a tap
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setGuest(false);
+    document.addEventListener('keydown', esc);
+    return () => { clearTimeout(focus); document.removeEventListener('keydown', esc); };
   }, [guest]);
   return (
     <>
@@ -37,15 +38,15 @@ export function Landing({ onDone }: { onDone: (s: Session) => void }) {
           <span key={i} style={{ ...after(x.d), left: `${x.left}%`, fontSize: x.size, '--t': `${x.t}s` } as React.CSSProperties} className={`suit-drift ${x.c}`}>{x.s}</span>
         ))}
       </div>
-      <div className="relative z-10 flex flex-1 flex-col gap-4">
+      <div className="relative z-10 flex flex-1 flex-col gap-[clamp(0.5rem,2dvh,1rem)]">
         <Hero />
-        <div className="flex flex-1 items-center justify-center"><CardFan /></div>
-        <div className="flex flex-col gap-4 pb-6">
+        <div className="flex min-h-0 flex-1 items-center justify-center"><CardFan /></div>
+        <div className="flex flex-col gap-[clamp(0.25rem,1.5dvh,1rem)] pb-[clamp(0.25rem,2dvh,1.5rem)]">
           <section style={after(0.5)} className="rise relative flex flex-col gap-3 rounded-3xl border-2 border-neon bg-surface px-4 pb-4 pt-6">
             <span className="shine absolute -top-3 left-4 rounded-full bg-neon px-3 py-1 text-[11px] font-bold tracking-widest text-ink">RECOMMENDED</span>
             <ul className="flex flex-col gap-1.5">
               {PERKS.map((p, i) => (
-                <li key={p} style={after(0.9 + i * 0.15)} className="rise flex items-start gap-2 text-sm">
+                <li key={p} style={after(0.9 + i * 0.15)} className="fade flex items-start gap-2 text-sm">
                   <span aria-hidden="true" className="font-bold text-neon">✓</span>
                   {p}
                 </li>
@@ -54,26 +55,29 @@ export function Landing({ onDone }: { onDone: (s: Session) => void }) {
             <GoogleButton onDone={onDone} />
           </section>
 
-          <div style={after(1.5)} className="rise">
-            <button
-              onClick={() => setGuest((g) => !g)}
-              aria-expanded={guest}
-              className="mx-auto flex h-11 w-fit items-center gap-1 px-3 text-sm text-mid underline-offset-4 hover:underline"
-            >
-              {guest ? 'Back to Google' : 'Skip, play as a guest'}
-              <span aria-hidden="true" className={`transition-transform ${guest ? '-rotate-90' : ''}`}>›</span>
-            </button>
-            {guest && (
-              <div ref={form} style={after(0)} className="rise mt-2 flex flex-col gap-3">
-                <p className="rounded-xl bg-surface px-3 py-2 text-xs text-mid">
-                  A guest account stays on this phone only. If you log out or clear your browser, your balance and games are gone. You can connect Google later to keep them.
-                </p>
-                <NamePrompt onDone={onDone} label="Play as Guest" autoFocus={false} />
-              </div>
-            )}
-          </div>
+          <button
+            style={after(1.5)}
+            onClick={() => setGuest(true)}
+            aria-haspopup="dialog"
+            className="fade mx-auto flex h-11 w-fit items-center gap-1 px-3 text-sm text-mid underline-offset-4 hover:underline"
+          >
+            Skip, play as a guest <span aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
+      {guest && (
+        <div style={after(0)} className="fade fixed inset-0 z-40 flex items-end justify-center bg-ink/80" onClick={() => setGuest(false)}>
+          <div ref={sheet} role="dialog" aria-modal="true" aria-label="Play as a guest" onClick={(e) => e.stopPropagation()} className="sheet-up w-full max-w-[420px] rounded-t-[28px] bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+            <h2 className="display text-3xl font-bold leading-tight">Play as a <span className="text-neon">guest</span></h2>
+            <p className="my-3 text-sm text-mid">
+              A guest account stays on this phone only. If you log out or clear your browser, your balance and games are gone. You can connect Google later to keep them.
+            </p>
+            <NamePrompt onDone={onDone} label="Play as Guest" autoFocus={false} />
+            <button onClick={() => setGuest(false)} className="mt-3 h-12 w-full rounded-2xl bg-surface-2 font-semibold">Back to Google</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
