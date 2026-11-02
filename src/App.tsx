@@ -3,6 +3,7 @@ import { Route, Switch } from 'wouter';
 import { armAudio } from './lib/sound';
 import { Home } from './pages/Home';
 import { RoomPage } from './pages/RoomPage';
+import { SettleRoom } from './pages/SettleRoom';
 
 export default function App() {
   useEffect(armAudio, []);
@@ -12,6 +13,7 @@ export default function App() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/room/:code">{(p) => <RoomPage code={p.code} />}</Route>
+          <Route path="/settle/:gameId">{(p) => <SettleRoom gameId={p.gameId} />}</Route>
           <Route>Not found</Route>
         </Switch>
       </main>

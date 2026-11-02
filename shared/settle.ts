@@ -1,4 +1,4 @@
-import type { Payment } from './types';
+import type { Payment } from './types.js';
 
 /** Greedy debt simplification on integer nets (Σ net must be 0). At most n−1 payments. */
 export function simplifyDebts(nets: Record<string, number>): Payment[] {

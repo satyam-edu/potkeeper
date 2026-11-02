@@ -77,11 +77,62 @@ export interface HistoryGame {
   baseBet: number;
   net: number;
   players: { name: string; net: number; isMe: boolean }[];
+  status: 'PENDING' | 'SETTLED'; // SETTLED: everyone confirmed the money changed hands (see the settle room)
+  settledAt: string | null;
+  canStart: boolean; // I may open a settle room for it (the host of that game)
+  open: { ready: number; total: number } | null; // a settle room is open right now
 }
 
 /** One page of finished games, newest first. Throws if the server can't be reached. */
-export async function fetchHistory(s: Session, before?: string): Promise<{ games: HistoryGame[]; next: string | null }> {
-  const res = await fetch(`/api/me/history${before ? `?before=${encodeURIComponent(before)}` : ''}`, { headers: { authorization: `Bearer ${s.token}` } });
+export async function fetchHistory(s: Session, before?: string, status?: 'SETTLED'): Promise<{ games: HistoryGame[]; next: string | null }> {
+  const q = new URLSearchParams({ ...(before && { before }), ...(status && { status }) }).toString();
+  const res = await fetch(`/api/me/history${q ? `?${q}` : ''}`, { headers: { authorization: `Bearer ${s.token}` } });
   if (!res.ok) throw new Error(String(res.status));
   return (await res.json()) as { games: HistoryGame[]; next: string | null };
 }
+
+// ---- Settle room: the host opens it, every player confirms, the last click settles the game and moves the wallets.
+
+export interface SettleView {
+  game: { id: string; endedAt: string; rounds: number; baseBet: number; status: 'PENDING' | 'SETTLED'; settledAt?: string };
+  canStart: boolean;
+  room: null | {
+    status: 'OPEN' | 'SETTLED' | 'CANCELLED' | 'EXPIRED';
+    startedBy: string;
+    startedAt: string;
+    expiresAt: string;
+    settledAt?: string;
+    closedAt?: string;
+    players: { name: string; net: number; readyAt: string | null; isMe: boolean; walletDelta?: number }[];
+    payments: { from: string; to: string; amount: number; fromMe: boolean; toMe: boolean }[];
+    mine: { needed: boolean; ready: boolean };
+  };
+}
+export interface OpenRoom { gameId: string; endedAt: string; ready: number; total: number; mineReady: boolean }
+
+const SETTLE_ERRORS: Record<string, string> = {
+  NOT_HOST: 'Only the host of that game can do this',
+  NOT_FOUND: "We couldn't find that game",
+  ALREADY_SETTLED: 'This game is already settled',
+  NOTHING_TO_SETTLE: 'Nobody owes anything in this game',
+  NOT_OPEN: 'The settle room is closed. Ask the host to open it again',
+  UNAUTHORIZED: 'Please log in again',
+};
+
+async function settleCall<T>(s: Session, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${s.token}`, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new Error("Couldn't reach the server, try again");
+  }
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(SETTLE_ERRORS[data.error ?? ''] ?? 'Something went wrong, try again');
+  return data;
+}
+
+export const fetchSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, `/api/settlements?gameId=${encodeURIComponent(gameId)}`);
+export const startSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, '/api/settlements', { gameId });
+export const cancelSettle = (s: Session, gameId: string) => settleCall<SettleView>(s, '/api/settlements/cancel', { gameId });
+export const clickReady = (s: Session, gameId: string, ready: boolean) => settleCall<SettleView>(s, '/api/settlements/ready', { gameId, ready });
+export const fetchOpenRooms = async (s: Session) => (await settleCall<{ open: OpenRoom[] }>(s, '/api/settlements')).open;

@@ -5,6 +5,7 @@ import type { RoomState } from '../shared/types';
 export interface SettlePayload {
   sessionId: string;
   roomCode: string;
+  hostId: string;
   baseBet: number;
   rounds: number;
   startedAt?: string;
@@ -16,6 +17,7 @@ export function buildPayload(s: RoomState, startedAt?: string): SettlePayload {
   return {
     sessionId: s.sessionId,
     roomCode: s.code,
+    hostId: s.hostId,
     baseBet: s.baseBet,
     rounds: s.roundNumber - s.settledRounds, // finished rounds only: End Game already dropped an unfinished one
     startedAt,

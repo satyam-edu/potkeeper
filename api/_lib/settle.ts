@@ -10,6 +10,7 @@ export interface SettlePlayer {
 export interface SettlePayload {
   sessionId: string;
   roomCode: string;
+  hostId?: string;
   baseBet: number;
   rounds: number;
   startedAt?: string;
@@ -24,7 +25,8 @@ const isDate = (s: unknown): s is string => typeof s === 'string' && !Number.isN
 export function parseSettle(raw: unknown): SettlePayload | null {
   const b = raw as Partial<SettlePayload> | null;
   if (!b || typeof b !== 'object') return null;
-  const { sessionId, roomCode, baseBet, rounds, startedAt, endedAt, players } = b;
+  const { sessionId, roomCode, hostId, baseBet, rounds, startedAt, endedAt, players } = b;
+  if (hostId !== undefined && !mongoose.isValidObjectId(hostId)) return null;
   if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 64) return null;
   if (!isInt(baseBet) || baseBet < 1 || !isInt(rounds) || rounds < 0) return null;
   if (!isDate(endedAt) || (startedAt !== undefined && !isDate(startedAt))) return null;
@@ -41,6 +43,7 @@ export function parseSettle(raw: unknown): SettlePayload | null {
   return {
     sessionId,
     roomCode: String(roomCode ?? ''),
+    hostId,
     baseBet,
     rounds,
     startedAt,
@@ -55,7 +58,7 @@ const MAX_HOPS = 5;
  * A room keeps the userId it started with. If that guest merged into a Google account meanwhile, credit the
  * account they merged into (follows chains). Players that end up as the same user are folded into one entry.
  */
-async function resolveMerged(players: SettlePlayer[], session: mongoose.ClientSession): Promise<SettlePlayer[]> {
+async function resolveMerged(players: SettlePlayer[], session: mongoose.ClientSession): Promise<{ players: SettlePlayer[]; target: Map<string, string> }> {
   const target = new Map(players.map((p) => [p.userId, p.userId]));
   for (let hop = 0; hop < MAX_HOPS; hop++) {
     const ids = [...new Set(target.values())];
@@ -70,11 +73,11 @@ async function resolveMerged(players: SettlePlayer[], session: mongoose.ClientSe
     const seen = out.get(userId);
     out.set(userId, seen ? { ...seen, net: seen.net + p.net, cashedOut: seen.cashedOut && p.cashedOut } : { ...p, userId });
   }
-  return [...out.values()];
+  return { players: [...out.values()], target };
 }
 
 /**
- * Save the game and credit every wallet in ONE transaction.
+ * Save the game and credit every wallet in ONE transaction. The game starts PENDING; the wallets give the amount back when the game is settled (see settlements.ts).
  * Idempotent on sessionId: a repeat returns { duplicate: true } and touches no wallet.
  */
 export async function applySettle(p: SettlePayload): Promise<{ duplicate: boolean }> {
@@ -83,9 +86,14 @@ export async function applySettle(p: SettlePayload): Promise<{ duplicate: boolea
   try {
     await session.withTransaction(async () => {
       // inside the transaction, so a merge that commits at the same moment can't slip between lookup and credit
-      const players = await resolveMerged(p.players, session);
+      const { players, target } = await resolveMerged(p.players, session);
+      const endedAt = new Date(p.endedAt);
+      const nothingOwed = players.every((x) => x.net === 0); // nobody to pay: the game is settled from the start
       await GameSession.create(
-        [{ ...p, players, startedAt: p.startedAt && new Date(p.startedAt), endedAt: new Date(p.endedAt) }],
+        [{
+          ...p, players, hostId: p.hostId && (target.get(p.hostId) ?? p.hostId), startedAt: p.startedAt && new Date(p.startedAt), endedAt,
+          ...(nothingOwed && { status: 'SETTLED', settledAt: endedAt }),
+        }],
         { session },
       );
       const res = await User.bulkWrite(

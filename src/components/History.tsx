@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 import { signed } from '../lib/format';
 import { fetchHistory, type HistoryGame, type Session } from '../lib/session';
 
@@ -6,8 +7,9 @@ const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 
 const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
 const tone = (n: number) => (n < 0 ? 'text-danger' : 'text-neon');
 
-/** Past games, newest first. Tap a row to see everyone's result. */
-export function History({ session }: { session: Session }) {
+/** Past games, newest first. Tap a row to see everyone's result and to open its settle room. `settledOnly` is the Settled tab. */
+export function History({ session, settledOnly = false }: { session: Session; settledOnly?: boolean }) {
+  const [, go] = useLocation();
   const [games, setGames] = useState<HistoryGame[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export function History({ session }: { session: Session }) {
   const load = (before?: string) => {
     setBusy(true);
     setFailed(false);
-    fetchHistory(session, before)
+    fetchHistory(session, before, settledOnly ? 'SETTLED' : undefined)
       .then((p) => { setGames((g) => [...(before ? (g ?? []) : []), ...p.games]); setNext(p.next); })
       .catch(() => setFailed(true))
       .finally(() => setBusy(false));
@@ -26,7 +28,7 @@ export function History({ session }: { session: Session }) {
 
   return (
     <section>
-      {games?.length === 0 && <p className="text-mid">No games yet. Your finished games show up here.</p>}
+      {games?.length === 0 && <p className="text-mid">{settledOnly ? 'No settled games yet. Games you have settled up show here.' : 'No games yet. Your finished games show up here.'}</p>}
       <ul className="flex flex-col gap-2">
         {games?.map((g) => (
           <li key={g.id} className="rounded-2xl bg-surface">
@@ -34,6 +36,9 @@ export function History({ session }: { session: Session }) {
               <span className="flex flex-col">
                 <span className="font-bold">{day(g.endedAt)}</span>
                 <span className="text-sm text-mid">{time(g.endedAt)} · {g.rounds} round{g.rounds === 1 ? '' : 's'} · ₹{g.baseBet} base</span>
+                <span className={`mt-1 w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${g.status === 'SETTLED' ? 'bg-surface-2 text-mid' : g.open ? 'bg-neon text-ink' : 'border border-line text-paper'}`}>
+                  {g.status === 'SETTLED' ? '✓ Settled' : g.open ? `Settling ${g.open.ready} of ${g.open.total}` : 'Pending'}
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 <span className={`amount text-xl tabular-nums ${g.net === 0 ? 'text-mid' : tone(g.net)}`}>{signed(g.net)}</span>
@@ -50,6 +55,11 @@ export function History({ session }: { session: Session }) {
                     <span className={`font-semibold tabular-nums ${p.net === 0 ? 'text-mid' : tone(p.net)}`}>{signed(p.net)}</span>
                   </li>
                 ))}
+                <li className="pt-2">
+                  <button onClick={() => go(`/settle/${g.id}`)} className={`h-12 w-full rounded-2xl font-bold ${g.status === 'PENDING' && (g.open || g.canStart) ? 'bg-neon text-ink' : 'bg-surface-2'}`}>
+                    {g.status === 'SETTLED' ? 'View receipt' : g.open ? 'Open settle room' : g.canStart ? 'Settle this game' : 'See settle status'}
+                  </button>
+                </li>
               </ul>
             )}
           </li>
