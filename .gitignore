@@ -6,3 +6,5 @@ dist/
 .vercel/
 .wrangler/
 .dev.vars
+
+.partykit/
