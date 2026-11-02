@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { sendFeedback, type Session } from '../lib/session';
 
-const HINT = 'What should we add? Found a bug? Tell us what you tapped and what went wrong. Or just say hi.';
+const POINTS = ['A feature you want', 'A bug you found', 'Or just say hi'];
 const MAX = 500;
 
 /** Feedback for the developer (Google accounts only; the menu keeps guests out). */
@@ -36,19 +36,24 @@ export function FeedbackSheet({ session, onClose }: { session: Session; onClose:
         {sent ? (
           <>
             <h2 className="display text-3xl font-bold leading-tight">Thank <span className="text-neon">you</span></h2>
-            <p className="text-mid">Your message reached Satyam. Every idea and bug gets read.</p>
+            <p className="text-mid">Your message was sent. Every idea and bug gets read.</p>
             <button type="button" onClick={onClose} className="display h-14 rounded-2xl bg-neon text-xl font-bold text-ink">Done</button>
           </>
         ) : (
           <>
-            <h2 className="display text-3xl font-bold leading-tight">Tell <span className="text-neon">Satyam</span></h2>
+            <h2 className="display text-3xl font-bold leading-tight">Send <span className="text-neon">feedback</span></h2>
+            <ul className="flex flex-col gap-0.5 text-sm text-mid">
+              {POINTS.map((p) => (
+                <li key={p} className="flex items-center gap-2"><span aria-hidden="true" className="text-neon">•</span>{p}</li>
+              ))}
+            </ul>
             <label className="flex flex-col gap-1">
               <textarea
                 value={text}
                 onChange={(e) => { setText(e.target.value); setErr(''); }}
                 maxLength={MAX}
-                rows={6}
-                placeholder={HINT}
+                rows={5}
+                placeholder="Write here…"
                 aria-label="Your message"
                 className="resize-none rounded-2xl bg-surface-2 p-4 text-base outline-none ring-neon focus:ring-2"
               />

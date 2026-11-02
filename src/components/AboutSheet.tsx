@@ -1,8 +1,8 @@
 const LINES = [
-  ['The pot, kept.', "PotKeeper remembers who put in what, so nobody has to 'remember' it differently at midnight."],
-  ['No chips needed.', 'Chips get lost under sofas. Your phone mostly does not (we hope).'],
-  ['Zero drama.', "The app does the maths. It has no favourites, not even the person who built it."],
-  ['Bugs.', "If something looks wrong, it is a feature that has not introduced itself yet. Tell us and we will make it behave."],
+  ['Hisaab pakka.', "Who put in what? PotKeeper remembers, so nobody has to say 'bhai, maine diye the' at midnight."],
+  ['No chips, no problem.', 'Chips vanish under sofas. Your phone does not. Probably.'],
+  ['Pack with a tap.', "No more 'I was just thinking'. The app does the maths and has zero favourites."],
+  ['Found a bug?', 'It is a feature that has not introduced itself yet. Send feedback and we will make them shake hands.'],
 ];
 
 /** Light hearted "about" sheet with a line about the developer. */
@@ -29,7 +29,7 @@ export function AboutSheet({ onClose }: { onClose: () => void }) {
         <div className="rounded-2xl bg-neon px-4 py-3 text-ink">
           <p className="text-[10px] font-bold tracking-widest opacity-70">MADE BY</p>
           <p className="display text-3xl font-bold leading-tight">SATYAM</p>
-          <p className="text-sm font-semibold">Developer, tester, and the person who has now lost to his own app more than once.</p>
+          <p className="text-sm font-semibold">Builds the app, breaks the app, fixes the app. Still cannot beat a Trail.</p>
         </div>
         <button onClick={onClose} className="mt-4 h-12 w-full rounded-2xl btn-quiet font-semibold">Close</button>
       </div>
