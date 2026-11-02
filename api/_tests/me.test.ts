@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { nextNameChange } from './_lib/auth';
-import { GET, PATCH } from './me';
+import { nextNameChange } from '../_lib/auth';
+import { GET, PATCH } from '../me';
 
 describe('GET /api/me auth', () => {
   const get = (h: Record<string, string> = {}) => GET(new Request('http://x/api/me', { headers: h }));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanName } from '../_lib/auth';
-import { POST } from './guest';
+import { POST } from '../auth/guest';
 
 describe('cleanName', () => {
   it('trims, collapses spaces, caps length, rejects empties and non-strings', () => {

@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import mongoose from 'mongoose';
-import { connectDb } from './_lib/db';
-import { FEEDBACK_MAX, FEEDBACK_PER_DAY, parseFeedback } from './_lib/feedback';
-import { issueToken } from './_lib/auth';
-import { Feedback, User } from './_lib/models';
-import { buildFeedbackEmail, sendFeedbackEmail } from './_lib/mail';
-import { POST } from './feedback';
+import { connectDb } from '../_lib/db';
+import { FEEDBACK_MAX, FEEDBACK_PER_DAY, parseFeedback } from '../_lib/feedback';
+import { issueToken } from '../_lib/auth';
+import { Feedback, User } from '../_lib/models';
+import { buildFeedbackEmail, sendFeedbackEmail } from '../_lib/mail';
+import { POST } from '../feedback';
 
 try { process.loadEnvFile('.env'); } catch { /* no .env: live tests are skipped */ }
 const live = !!process.env.MONGODB_URI;

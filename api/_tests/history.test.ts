@@ -4,7 +4,7 @@ import { issueToken } from '../_lib/auth';
 import { connectDb } from '../_lib/db';
 import { GameSession, User } from '../_lib/models';
 import { applySettle } from '../_lib/settle';
-import { GET } from './history';
+import { GET } from '../me/history';
 
 try { process.loadEnvFile('.env'); } catch { /* no .env: live tests are skipped */ }
 const live = !!process.env.MONGODB_URI;
