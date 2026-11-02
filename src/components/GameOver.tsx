@@ -1,3 +1,4 @@
+import { DealingCards } from './DealingCards';
 import { simplifyDebts } from '../../shared/settle';
 import type { ClientMessage, RoomState } from '../../shared/types';
 import { rupees, signed } from '../lib/format';
@@ -53,7 +54,10 @@ export function GameOver({ state, save, isHost, send, onHome }: { state: RoomSta
         </section>
       )}
       <div className="mt-auto flex flex-col gap-3 pb-2">
-        <p role="status" className={`text-center text-sm ${save === 'saved' ? 'text-neon' : save === 'failed' ? 'text-danger' : 'text-mid'}`}>{SAVE_TEXT[save]}</p>
+        <p role="status" className={`flex items-center justify-center gap-2 text-center text-sm ${save === 'saved' ? 'text-neon' : save === 'failed' ? 'text-danger' : 'text-mid'}`}>
+          {save === 'saving' && <DealingCards size="sm" label="Saving" />}
+          {SAVE_TEXT[save]}
+        </p>
         {isHost && (
           <>
             <div className="flex gap-2">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
+import { DealingCards } from './DealingCards';
 import { signed } from '../lib/format';
 import { fetchHistory, type HistoryGame, type Session } from '../lib/session';
 
@@ -65,7 +66,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
           </li>
         ))}
       </ul>
-      {games === null && !failed && <p className="text-mid">Loading…</p>}
+      {games === null && !failed && <div className="flex flex-col items-center gap-1 py-6"><DealingCards label="Loading your games" /><p className="text-sm text-mid">Loading…</p></div>}
       {failed && <button onClick={() => load(games?.length ? next ?? undefined : undefined)} className="text-sm text-danger underline">Couldn't load history. Tap to retry.</button>}
       {next && !failed && (
         <button disabled={busy} onClick={() => load(next)} className="mt-3 h-12 w-full rounded-2xl bg-surface-2 font-semibold disabled:opacity-40">Show more</button>
