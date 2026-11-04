@@ -68,25 +68,25 @@ export function SettleRoom({ gameId }: { gameId: string }) {
       {fresh && <p role="status" className="rounded-xl bg-neon px-3 py-3 text-center font-bold text-ink">Everyone confirmed. Game settled, wallets updated.</p>}
 
       {view && !room && !settled && (
-        <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
+        <section className="flex flex-col gap-3 rounded-2xl bg-ink border border-white/15 p-4">
           <p className="font-bold">No settle room is open</p>
           <p className="text-sm text-mid">{view.canStart ? 'Open one when you are ready to settle. Everyone from this game will be asked to confirm.' : 'The host of this game opens the settle room. Come back when they have.'}</p>
         </section>
       )}
 
       {room && room.status !== 'OPEN' && room.status !== 'SETTLED' && !settled && (
-        <p className="rounded-xl bg-surface px-3 py-3 text-sm text-mid">The last settle room was {room.status === 'CANCELLED' ? 'cancelled' : 'closed after 48 hours'} on {when(room.closedAt ?? room.startedAt)}. Nothing was changed.</p>
+        <p className="rounded-xl bg-ink border border-white/15 px-3 py-3 text-sm text-mid">The last settle room was {room.status === 'CANCELLED' ? 'cancelled' : 'closed after 48 hours'} on {when(room.closedAt ?? room.startedAt)}. Nothing was changed.</p>
       )}
 
       {room && (open || room.status === 'SETTLED') && (
         <>
           {open ? (
-            <section className="rounded-2xl bg-surface p-4">
+            <section className="rounded-2xl bg-ink border border-white/15 p-4">
               <div className="flex items-baseline justify-between">
                 <p className="font-bold">{ready} of {total} confirmed</p>
                 <p className="text-xs text-mid">Open until {when(room.expiresAt)}</p>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ready} aria-valuemax={total}>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={ready} aria-valuemax={total}>
                 <div className="h-full rounded-full bg-neon transition-all" style={{ width: `${total ? (ready / total) * 100 : 0}%` }} />
               </div>
             </section>
@@ -101,7 +101,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
             <h2 className="text-xs font-bold tracking-widest text-mid">WHO PAYS WHOM</h2>
             <ul className="flex flex-col gap-1.5">
               {room.payments.map((p, i) => (
-                <li key={i} className={`flex items-center justify-between rounded-xl px-4 py-3 ${p.fromMe || p.toMe ? 'bg-surface-2' : 'bg-surface'}`}>
+                <li key={i} className={`flex items-center justify-between rounded-xl px-4 py-3 ${p.fromMe || p.toMe ? 'bg-white/10 border border-white/25' : 'bg-ink border border-white/15'}`}>
                   <span className={p.fromMe || p.toMe ? 'font-bold' : 'text-mid'}>{p.fromMe ? 'You pay' : `${p.from} pays`} {p.toMe ? 'you' : p.to}</span>
                   <span className="amount text-lg tabular-nums">{rupees(p.amount)}</span>
                 </li>
@@ -113,7 +113,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
             <h2 className="text-xs font-bold tracking-widest text-mid">{open ? 'PLAYERS' : 'WALLET CHANGE'}</h2>
             <ul className="flex flex-col gap-1.5">
               {room.players.map((p, i) => (
-                <li key={i} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+                <li key={i} className="flex items-center justify-between rounded-xl bg-ink border border-white/15 px-4 py-3">
                   <span className="min-w-0">
                     <span className={`block [overflow-wrap:anywhere] ${p.isMe ? 'font-bold' : ''}`}>{p.name}{p.isMe && ' (you)'}</span>
                     <span className={`block text-xs ${p.readyAt ? 'text-neon' : 'text-mid'}`}>
