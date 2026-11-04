@@ -42,7 +42,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const staked = state.players.reduce((n, p) => n + p.roundBet, 0);
   const shower = state.players.find((p) => p.userId === state.showBy);
   const turnName = state.players.find((p) => p.userId === turnId)?.name;
-  const seats = fromViewer(state.players, meId);
+  const seats = fromViewer(state.players.filter((p) => !p.cashedOut), meId); // cashed out players leave the table; they come back if the Host allows a rejoin
   // The D button marks who opened this round (they bet first); it moves on to the next player each round.
   const opener = state.players[state.startIndex];
   const dealerId = opener && !opener.cashedOut ? opener.userId : null;
