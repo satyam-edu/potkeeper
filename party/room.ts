@@ -17,6 +17,11 @@ export class Room extends Server<Cloudflare.Env> {
   saveStatus?: 'saved' | 'failed'; // told to anyone who joins after End Game
   startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
+  /** Runs each time this room's memory starts empty: a new room, or one that was restarted or wiped. A started line for a room code that was already playing means it was wiped. */
+  onStart() {
+    console.log(`room ${this.name} started with empty memory`);
+  }
+
   onMessage(sender: Connection, raw: WSMessage) {
     if (typeof raw !== 'string' || raw.length > MAX_RESTORE_BYTES) return this.fail(sender, 'BAD_MESSAGE');
     let msg: ClientMessage;
@@ -53,7 +58,10 @@ export class Room extends Server<Cloudflare.Env> {
       this.users.set(conn.id, claims.sub);
       return this.broadcastState();
     }
-    if (!this.state) return this.fail(conn, 'ROOM_NOT_FOUND');
+    if (!this.state) {
+      console.warn(`room ${this.name} not found for a join`);
+      return this.fail(conn, 'ROOM_NOT_FOUND');
+    }
     const r = reduce(this.state, { type: 'JOIN', name, avatarUrl: msg.avatarUrl }, claims.sub);
     if (!r.ok) return this.fail(conn, r.error);
     this.state = r.state;

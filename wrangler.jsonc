@@ -5,5 +5,7 @@
   "durable_objects": {
     "bindings": [{ "name": "Main", "class_name": "Room" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // Logs (3 days, free plan 200,000 events a day): our own lines and errors only, not one line per request.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } }
 }
