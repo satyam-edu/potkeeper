@@ -351,7 +351,10 @@ function reorder(s: RoomState, order: string[]): Result {
     if (!p) return err('BAD_INPUT');
     players.push({ ...p, seat });
   }
-  return ok({ ...s, players, historyStack: [] });
+  // startIndex is a seat number: follow the last opener to their new seat, so the next round still opens with whoever is next after them.
+  const opener = s.players[s.startIndex];
+  const startIndex = opener ? players.findIndex((p) => p.userId === opener.userId) : s.startIndex;
+  return ok({ ...s, players, startIndex, historyStack: [] });
 }
 
 /** A cashed out player asks to come back; nothing changes until the host answers. */

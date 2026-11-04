@@ -222,6 +222,16 @@ describe('host ops & roster', () => {
     s = run(s, { type: 'START_ROUND', sessionId: 'x' }, 'p1');
     expect(code(s, { type: 'REORDER', order: ['p1', 'p2', 'p3'] }, 'p1')).toBe('WRONG_PHASE');
   });
+  it('reordering between rounds keeps the next opener: it is still the player after the last opener', () => {
+    let s = started(3); // p1 opened
+    s = run(s, { type: 'PACK' }, 'p1');
+    s = run(s, { type: 'PACK' }, 'p2'); // p3 is left: auto win, BETWEEN_ROUNDS
+    expect(s.phase).toBe('BETWEEN_ROUNDS');
+    s = run(s, { type: 'REORDER', order: ['p3', 'p2', 'p1'] }, 'p1');
+    s = run(s, { type: 'START_ROUND', sessionId: 'y' }, 'p1');
+    expect(s.players[s.startIndex]?.userId).toBe('p3'); // after p1 in the new order (p1 is last, so it wraps to p3)
+    expect(s.players.map((p) => p.userId)).toEqual(['p3', 'p2', 'p1']);
+  });
   it('cash-out locks balance, excludes from turns, host cannot be removed', () => {
     let s = started(4);
     s = run(s, { type: 'REMOVE_PLAYER', userId: 'p2' }, 'p1');

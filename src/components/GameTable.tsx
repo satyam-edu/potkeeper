@@ -14,6 +14,7 @@ import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
 import { WinCard } from './WinCard';
 import { SeatCard } from './SeatCard';
+import { SeatingSheet } from './SeatingSheet';
 import { SoundToggle } from './SoundToggle';
 import { RulesSheet } from './RulesSheet';
 import { ShowdownModal } from './ShowdownModal';
@@ -23,6 +24,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   useEffect(() => { void loadSounds(); }, []);
   const [rules, setRules] = useState(false);
   const [totals, setTotals] = useState(false);
+  const [seating, setSeating] = useState(false);
   const [result, setResult] = useState<Winner[] | null>(null);
   const [winPopup, setWinPopup] = useState(false); // centre popup for a few seconds after a round ends
   const prev = useRef<RoomState | null>(null);
@@ -108,9 +110,12 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
       {winPopup && state.phase === 'BETWEEN_ROUNDS' && result && <WinCard state={state} winners={result} onClose={() => setWinPopup(false)} />}
       {state.phase === 'BETWEEN_ROUNDS' ? (
         isHost ? (
-          <button onClick={() => send({ t: 'START_ROUND' })} className="display h-16 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none">
-            Next Round
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setSeating(true)} className="display h-16 rounded-3xl btn-quiet px-5 text-xl font-bold">Seats</button>
+            <button onClick={() => send({ t: 'START_ROUND' })} className="display h-16 flex-1 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none">
+              Next Round
+            </button>
+          </div>
         ) : (
           <p className="py-4 text-center text-mid">Round over · waiting for the host…</p>
         )
@@ -138,6 +143,7 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
           onClose={isHost || state.showBy === meId ? () => send({ t: 'CANCEL_SHOW' }) : undefined}
         />
       )}
+      {seating && isHost && state.phase === 'BETWEEN_ROUNDS' && <SeatingSheet state={state} meId={meId} send={send} onClose={() => setSeating(false)} />}
       {totals && <GameTotalSheet state={state} meId={meId} onClose={() => setTotals(false)} />}
       {rules && <RulesSheet onClose={() => setRules(false)} />}
       {sheet && (
