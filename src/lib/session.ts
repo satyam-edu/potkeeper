@@ -96,6 +96,7 @@ export async function fetchHistory(s: Session, before?: string, status?: 'SETTLE
 export interface SettleView {
   game: { id: string; endedAt: string; rounds: number; baseBet: number; status: 'PENDING' | 'SETTLED'; settledAt?: string };
   canStart: boolean;
+  canForce: boolean;
   room: null | {
     status: 'OPEN' | 'SETTLED' | 'CANCELLED' | 'EXPIRED';
     startedBy: string;
@@ -116,6 +117,7 @@ const SETTLE_ERRORS: Record<string, string> = {
   ALREADY_SETTLED: 'This game is already settled',
   NOTHING_TO_SETTLE: 'Nobody owes anything in this game',
   NOT_OPEN: 'The settle room is closed. Ask the host to open it again',
+  NOT_ADMIN: 'Only the developer account can do this',
   HAS_CONFIRMATIONS: 'Someone has already confirmed. They must take it back before the room can be cancelled',
   UNAUTHORIZED: 'Please log in again',
   GOOGLE_ONLY: 'Feedback is for Google accounts. Connect Google first',
@@ -139,6 +141,7 @@ export const fetchSettle = (s: Session, gameId: string) => apiCall<SettleView>(s
 export const startSettle = (s: Session, gameId: string) => apiCall<SettleView>(s, '/api/settlements', { gameId });
 export const cancelSettle = (s: Session, gameId: string) => apiCall<SettleView>(s, '/api/settlements/cancel', { gameId });
 export const clickReady = (s: Session, gameId: string, ready: boolean) => apiCall<SettleView>(s, '/api/settlements/ready', { gameId, ready });
+export const forceSettleGame = (s: Session, gameId: string) => apiCall<SettleView>(s, '/api/settlements/ready', { gameId, force: true });
 export const fetchOpenRooms = async (s: Session) => (await apiCall<{ open: OpenRoom[] }>(s, '/api/settlements')).open;
 
 export const sendFeedback = (s: Session, message: string) => apiCall<{ ok: true }>(s, '/api/feedback', { message });

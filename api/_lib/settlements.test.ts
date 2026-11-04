@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { connectDb } from './db';
 import { GameSession, Settlement, User } from './models';
 import { parseSettle } from './settle';
-import { cancelSettlement, listOpen, loadView, mayStart, owingPlayers, setReady, startSettlement } from './settlements';
+import { cancelSettlement, forceSettle, isAdmin, listOpen, loadView, mayStart, owingPlayers, setReady, startSettlement } from './settlements';
 
 try { process.loadEnvFile('.env'); } catch { /* no .env: live tests are skipped */ }
 const live = !!process.env.MONGODB_URI;
@@ -22,6 +22,15 @@ describe('owingPlayers / mayStart (no database)', () => {
     expect(mayStart(game, String(host))).toBe(true);
     expect(mayStart(game, String(id()))).toBe(false);
     expect(mayStart({ ...game, hostId: undefined }, String(id()))).toBe(true);
+  });
+  it('admin is a Google login whose email is in ADMIN_EMAILS (any case); guests and others are not', () => {
+    process.env.ADMIN_EMAILS = 'Dev@x.com, other@x.com';
+    expect(isAdmin({ googleId: 'g', email: 'dev@X.com' })).toBe(true);
+    expect(isAdmin({ googleId: 'g', email: 'nope@x.com' })).toBe(false);
+    expect(isAdmin({ email: 'dev@x.com' })).toBe(false); // no googleId
+    expect(isAdmin({})).toBe(false);
+    delete process.env.ADMIN_EMAILS;
+    expect(isAdmin({ googleId: 'g', email: 'dev@x.com' })).toBe(false);
   });
   it('the settle payload accepts a host id and rejects a bad one', () => {
     const [a, b] = [String(id()), String(id())];
@@ -137,5 +146,17 @@ describe.skipIf(!live)('settle room (live Mongo)', () => {
     expect((await loadView(p1, gameId) as { value: { room: { status: string } } }).value.room.status).toBe('EXPIRED');
     expect(await wallet(p1)).toBe(5);
     expect(await startSettlement(p1, gameId)).toMatchObject({ ok: true }); // and the host can try again
+  });
+
+  it('admin force settle: not a player, no room, one call settles every wallet once; others are refused', async () => {
+    const { users: [p1, p2, p3], gameId } = await game([5, -3, -2]) as { users: [string, string, string]; gameId: string };
+    const admin = String(new mongoose.Types.ObjectId()); // not in the game
+    expect(await forceSettle(admin, gameId, false)).toMatchObject({ ok: false, error: 'NOT_ADMIN' });
+    expect(await forceSettle(admin, gameId, true)).toMatchObject({ ok: true });
+    expect(await forceSettle(admin, gameId, true)).toMatchObject({ ok: true }); // a retry changes nothing
+    expect([await wallet(p1), await wallet(p2), await wallet(p3)]).toEqual([0, 0, 0]);
+    expect(await GameSession.countDocuments({ _id: gameId, status: 'SETTLED' })).toBe(1);
+    expect(await loadView(admin, gameId, false)).toMatchObject({ ok: false, status: 404 });
+    expect(await loadView(admin, gameId, true)).toMatchObject({ ok: true });
   });
 });

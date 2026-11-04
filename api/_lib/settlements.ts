@@ -43,21 +43,25 @@ async function expireStale(gameId?: string) {
   );
 }
 
-async function memberGame(userId: string, gameId: string): Promise<R<GameDoc>> {
+/** Developer accounts (env `ADMIN_EMAILS`, comma separated): a Google login with one of these emails may settle any game in one click. Guests have no email, so they never match. */
+export const isAdmin = (u: { email?: string | null; googleId?: string | null }) =>
+  !!u.googleId && !!u.email && (process.env.ADMIN_EMAILS ?? '').toLowerCase().split(',').map((e) => e.trim()).includes(u.email.toLowerCase());
+
+async function memberGame(userId: string, gameId: string, admin = false): Promise<R<GameDoc>> {
   if (!mongoose.isValidObjectId(gameId)) return fail(400, 'BAD_REQUEST');
   const game = (await GameSession.findById(gameId).lean()) as unknown as GameDoc | null;
   // Not in the game looks the same as no such game.
-  if (!game || !game.players.some((p) => same(p.userId, userId))) return fail(404, 'NOT_FOUND');
+  if (!game || !(admin || game.players.some((p) => same(p.userId, userId)))) return fail(404, 'NOT_FOUND');
   return ok(game);
 }
 
 /** Host opens the settle room (or gets the one already open). */
-export async function startSettlement(userId: string, gameId: string): Promise<R<true>> {
-  const g = await memberGame(userId, gameId);
+export async function startSettlement(userId: string, gameId: string, admin = false): Promise<R<true>> {
+  const g = await memberGame(userId, gameId, admin);
   if (!g.ok) return g;
   const game = g.value;
   if (game.status === 'SETTLED') return fail(409, 'ALREADY_SETTLED');
-  if (!mayStart(game, userId)) return fail(403, 'NOT_HOST');
+  if (!admin && !mayStart(game, userId)) return fail(403, 'NOT_HOST');
   await expireStale(gameId);
   if (await Settlement.exists({ gameId: oid(gameId), status: 'OPEN' })) return ok(true);
 
@@ -88,6 +92,23 @@ export async function cancelSettlement(userId: string, gameId: string): Promise<
   return fail(409, (await Settlement.exists(open)) ? 'HAS_CONFIRMATIONS' : 'NOT_OPEN');
 }
 
+/** The one transaction step that settles a room whose players have all clicked: room and game SETTLED, every wallet −net. */
+async function settleRoom(room: RoomDoc, now: Date, session: mongoose.ClientSession) {
+  if (room.players.reduce((n, p) => n + p.net, 0) !== 0) throw new Error('settlement nets do not sum to 0');
+  const game = await GameSession.updateOne({ _id: room.gameId, status: { $ne: 'SETTLED' } }, { $set: { status: 'SETTLED', settledAt: now, settlementId: room._id } }, { session });
+  if (game.modifiedCount !== 1) throw new Error('game is already settled');
+  await Settlement.updateOne(
+    { _id: room._id },
+    { $set: { status: 'SETTLED', settledAt: now, players: room.players.map((p) => ({ ...p, walletDelta: -p.net })) } },
+    { session },
+  );
+  const res = await User.bulkWrite(
+    room.players.map((p) => ({ updateOne: { filter: { _id: p.userId }, update: { $inc: { walletBalance: -p.net } } } })),
+    { session },
+  );
+  if (res.matchedCount !== room.players.length) throw new Error('a settling player has no user doc'); // abort: never settle half the wallets
+}
+
 /**
  * My click (or taking it back). When the last player has clicked, ONE transaction marks the room and the game
  * SETTLED and moves every wallet by −net. Clicking twice, or two last clicks at once, changes the wallets once.
@@ -113,19 +134,7 @@ export async function setReady(userId: string, gameId: string, ready: boolean): 
       changed = true;
       if (!ready || !room.players.every((p) => p.readyAt)) return;
 
-      if (room.players.reduce((n, p) => n + p.net, 0) !== 0) throw new Error('settlement nets do not sum to 0');
-      const game = await GameSession.updateOne({ _id: room.gameId, status: { $ne: 'SETTLED' } }, { $set: { status: 'SETTLED', settledAt: now, settlementId: room._id } }, { session });
-      if (game.modifiedCount !== 1) throw new Error('game is already settled');
-      await Settlement.updateOne(
-        { _id: room._id },
-        { $set: { status: 'SETTLED', settledAt: now, players: room.players.map((p) => ({ ...p, walletDelta: -p.net })) } },
-        { session },
-      );
-      const res = await User.bulkWrite(
-        room.players.map((p) => ({ updateOne: { filter: { _id: p.userId }, update: { $inc: { walletBalance: -p.net } } } })),
-        { session },
-      );
-      if (res.matchedCount !== room.players.length) throw new Error('a settling player has no user doc'); // abort: never settle half the wallets
+      await settleRoom(room, now, session);
     });
   } finally {
     await session.endSession();
@@ -138,9 +147,32 @@ export async function setReady(userId: string, gameId: string, ready: boolean): 
   return fail(latest ? 409 : 404, latest ? 'NOT_OPEN' : 'NOT_FOUND');
 }
 
+/** Admin only: opens the room if needed, counts every player as confirmed and settles the game, all in one step. */
+export async function forceSettle(userId: string, gameId: string, admin: boolean): Promise<R<true>> {
+  if (!admin) return fail(403, 'NOT_ADMIN');
+  const started = await startSettlement(userId, gameId, true);
+  if (!started.ok) return started.error === 'ALREADY_SETTLED' ? ok(true) : started;
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const now = new Date();
+      const room = (await Settlement.findOneAndUpdate(
+        { gameId: oid(gameId), status: 'OPEN', expiresAt: { $gt: now } },
+        { $set: { 'players.$[p].readyAt': now } },
+        { arrayFilters: [{ 'p.readyAt': null }], returnDocument: 'after', session },
+      ).lean()) as unknown as RoomDoc | null;
+      if (room) await settleRoom(room, now, session);
+    });
+  } finally {
+    await session.endSession();
+  }
+  return ok(true);
+}
+
 export interface SettleView {
   game: { id: string; endedAt: Date; rounds: number; baseBet: number; status: 'PENDING' | 'SETTLED'; settledAt?: Date };
   canStart: boolean; // I may open or cancel a room for this game
+  canForce: boolean; // admin: settle this game right now
   room: null | {
     status: RoomDoc['status'];
     startedBy: string;
@@ -155,8 +187,8 @@ export interface SettleView {
 }
 
 /** What the settle screen shows: the open room if there is one, else the settled receipt, else the latest closed one. */
-export async function loadView(userId: string, gameId: string): Promise<R<SettleView>> {
-  const g = await memberGame(userId, gameId);
+export async function loadView(userId: string, gameId: string, admin = false): Promise<R<SettleView>> {
+  const g = await memberGame(userId, gameId, admin);
   if (!g.ok) return g;
   const game = g.value;
   await expireStale(gameId);
@@ -170,6 +202,7 @@ export async function loadView(userId: string, gameId: string): Promise<R<Settle
   return ok({
     game: { id: String(game._id), endedAt: game.endedAt, rounds: game.rounds, baseBet: game.baseBet, status, settledAt: game.settledAt },
     canStart: status === 'PENDING' && mayStart(game, userId),
+    canForce: status === 'PENDING' && admin,
     room: room && {
       status: room.status,
       startedBy: nameOf(room.startedBy),

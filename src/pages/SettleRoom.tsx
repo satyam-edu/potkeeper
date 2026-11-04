@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { DealingCards } from '../components/DealingCards';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { rupees, signed } from '../lib/format';
-import { cancelSettle, clickReady, fetchSettle, loadSession, startSettle, type SettleView } from '../lib/session';
+import { cancelSettle, clickReady, fetchSettle, forceSettleGame, loadSession, startSettle, type SettleView } from '../lib/session';
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -18,7 +18,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
   const [view, setView] = useState<SettleView | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState<'start' | 'cancel' | 'ready' | null>(null);
+  const [confirm, setConfirm] = useState<'start' | 'cancel' | 'ready' | 'force' | null>(null);
   const [fresh, setFresh] = useState(false); // it settled while this screen was open
   const last = useRef<string | undefined>(undefined);
 
@@ -160,6 +160,11 @@ export function SettleRoom({ gameId }: { gameId: string }) {
             Open settle room
           </button>
         )}
+        {view?.canForce && (
+          <button disabled={busy} onClick={() => setConfirm('force')} className="display h-16 rounded-3xl bg-neon text-2xl font-bold text-ink shadow-[0_4px_0_#8fb300] active:translate-y-[2px] active:shadow-none disabled:opacity-40">
+            Settle now
+          </button>
+        )}
         {open && view?.canStart && ready === 0 && (
           <button disabled={busy} onClick={() => setConfirm('cancel')} className="h-12 rounded-2xl btn-quiet text-sm font-semibold disabled:opacity-40">Cancel the settle room</button>
         )}
@@ -181,6 +186,16 @@ export function SettleRoom({ gameId }: { gameId: string }) {
           body="You can open a new room later."
           confirmLabel="Cancel room"
           onConfirm={() => run(() => cancelSettle(session, gameId))}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
+      {confirm === 'force' && (
+        <ConfirmModal
+          tone="danger"
+          title="Settle this game now?"
+          body="Everyone is counted as confirmed and every wallet in this game moves by its net right away. This cannot be undone."
+          confirmLabel="Settle now"
+          onConfirm={() => run(() => forceSettleGame(session, gameId))}
           onCancel={() => setConfirm(null)}
         />
       )}
