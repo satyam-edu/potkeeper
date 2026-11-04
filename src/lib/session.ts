@@ -116,6 +116,7 @@ const SETTLE_ERRORS: Record<string, string> = {
   ALREADY_SETTLED: 'This game is already settled',
   NOTHING_TO_SETTLE: 'Nobody owes anything in this game',
   NOT_OPEN: 'The settle room is closed. Ask the host to open it again',
+  HAS_CONFIRMATIONS: 'Someone has already confirmed. They must take it back before the room can be cancelled',
   UNAUTHORIZED: 'Please log in again',
   GOOGLE_ONLY: 'Feedback is for Google accounts. Connect Google first',
   TOO_MANY: 'That is 5 messages today. Please try again tomorrow',

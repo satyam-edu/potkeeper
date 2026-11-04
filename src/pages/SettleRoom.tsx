@@ -160,7 +160,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
             Open settle room
           </button>
         )}
-        {open && view?.canStart && (
+        {open && view?.canStart && ready === 0 && (
           <button disabled={busy} onClick={() => setConfirm('cancel')} className="h-12 rounded-2xl btn-quiet text-sm font-semibold disabled:opacity-40">Cancel the settle room</button>
         )}
       </div>
@@ -178,7 +178,7 @@ export function SettleRoom({ gameId }: { gameId: string }) {
         <ConfirmModal
           tone="danger"
           title="Cancel the settle room?"
-          body="Everyone's confirmations are cleared. You can open a new room later."
+          body="You can open a new room later."
           confirmLabel="Cancel room"
           onConfirm={() => run(() => cancelSettle(session, gameId))}
           onCancel={() => setConfirm(null)}

@@ -120,11 +120,13 @@ describe.skipIf(!live)('settle room (live Mongo)', () => {
     expect(await GameSession.countDocuments({ _id: gameId, status: 'SETTLED' })).toBe(1);
   });
 
-  it('host cancels: clicks are cleared and a new room can open; an expired room cannot settle', async () => {
+  it('host cancels only while nobody has confirmed; a new room can open; an expired room cannot settle', async () => {
     const { users: [p1, p2], gameId } = await game([5, -5]) as { users: [string, string]; gameId: string };
     await startSettlement(p1, gameId);
     await setReady(p2, gameId, true);
     expect(await cancelSettlement(p2, gameId)).toMatchObject({ ok: false, error: 'NOT_HOST' });
+    expect(await cancelSettlement(p1, gameId)).toMatchObject({ ok: false, error: 'HAS_CONFIRMATIONS' }); // a click is never wiped
+    await setReady(p2, gameId, false);
     expect(await cancelSettlement(p1, gameId)).toMatchObject({ ok: true });
     expect(await setReady(p1, gameId, true)).toMatchObject({ ok: false, error: 'NOT_OPEN' });
 

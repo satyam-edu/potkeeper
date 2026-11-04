@@ -77,13 +77,15 @@ export async function startSettlement(userId: string, gameId: string): Promise<R
   return ok(true);
 }
 
-/** Host closes the open room; every click is cleared with it. */
+/** Host closes the open room. Refused once anyone has confirmed, so a tap can never wipe their clicks (they take theirs back first). */
 export async function cancelSettlement(userId: string, gameId: string): Promise<R<true>> {
   const g = await memberGame(userId, gameId);
   if (!g.ok) return g;
   if (!mayStart(g.value, userId)) return fail(403, 'NOT_HOST');
-  const done = await Settlement.findOneAndUpdate({ gameId: oid(gameId), status: 'OPEN' }, { $set: { status: 'CANCELLED', closedAt: new Date() } });
-  return done ? ok(true) : fail(409, 'NOT_OPEN');
+  const open = { gameId: oid(gameId), status: 'OPEN' };
+  const done = await Settlement.findOneAndUpdate({ ...open, players: { $not: { $elemMatch: { readyAt: { $ne: null } } } } }, { $set: { status: 'CANCELLED', closedAt: new Date() } });
+  if (done) return ok(true);
+  return fail(409, (await Settlement.exists(open)) ? 'HAS_CONFIRMATIONS' : 'NOT_OPEN');
 }
 
 /**
