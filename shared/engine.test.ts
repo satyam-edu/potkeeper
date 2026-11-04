@@ -208,6 +208,17 @@ describe('host ops & roster', () => {
     expect(code(s, { type: 'JOIN', name: 'x' }, 'u10')).toBe('ROOM_FULL');
     expect(code(s, { type: 'JOIN', name: 'x' }, 'u3')).toBe('OK'); // reconnect
   });
+  it('keeps a Google photo link on the seat, and only a Google one', () => {
+    const g = 'https://lh3.googleusercontent.com/a/abc=s96-c';
+    let s = run(createRoom('4829', 'p1', 'P1', 5), { type: 'JOIN', name: 'P1', avatarUrl: g }, 'p1');
+    expect(s.players[0]?.avatarUrl).toBe(g);
+    s = run(s, { type: 'JOIN', name: 'P2', avatarUrl: 'https://evil.example.com/x.png' }, 'p2');
+    s = run(s, { type: 'JOIN', name: 'P3', avatarUrl: 'http://lh3.googleusercontent.com/a' }, 'p3');
+    s = run(s, { type: 'JOIN', name: 'P4', avatarUrl: 'https://lh3.googleusercontent.com.evil.com/a' }, 'p4');
+    expect(s.players.slice(1).map((p) => p.avatarUrl)).toEqual([undefined, undefined, undefined]);
+    s = run(s, { type: 'JOIN', name: 'P1' }, 'p1'); // a reconnect without a photo keeps the one it had
+    expect(s.players[0]?.avatarUrl).toBe(g);
+  });
   it('transfers host', () => {
     const s = run(table(3), { type: 'TRANSFER_HOST', toUserId: 'p2' }, 'p1');
     expect(s.hostId).toBe('p2');

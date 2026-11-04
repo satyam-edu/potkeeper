@@ -5,7 +5,7 @@ export const MAX_PLAYERS = 10;
 export const UNDO_DEPTH = 3;
 
 export type Action =
-  | { type: 'JOIN'; name: string }
+  | { type: 'JOIN'; name: string; avatarUrl?: string }
   | { type: 'SET_CONNECTED'; connected: boolean }
   | { type: 'START_ROUND'; sessionId: string }
   | { type: 'BET' }
@@ -90,7 +90,7 @@ function dropStaleShow(s: RoomState): RoomState {
 function apply(s: RoomState, a: Action, actorId: string): Result {
   const isHost = actorId === s.hostId;
   switch (a.type) {
-    case 'JOIN': return join(s, actorId, a.name);
+    case 'JOIN': return join(s, actorId, a.name, cleanAvatar(a.avatarUrl));
     case 'SET_CONNECTED':
       return mapPlayer(s, actorId, (p) => ({ ...p, connected: a.connected }));
     case 'START_ROUND':
@@ -173,16 +173,21 @@ const liveCount = (s: RoomState) => s.players.filter((p) => !p.cashedOut).length
 
 // ---------- actions ----------
 
-function join(s: RoomState, userId: string, name: string): Result {
+/** A profile photo link is only kept if it is a short https link on Google's own picture host: nothing else can be loaded into every player's screen. */
+export function cleanAvatar(url: unknown): string | undefined {
+  return typeof url === 'string' && url.length <= 300 && /^https:\/\/[a-z0-9-]+\.googleusercontent\.com\/[\w\-./=%~:+?&]*$/i.test(url) ? url : undefined;
+}
+
+function join(s: RoomState, userId: string, name: string, avatarUrl?: string): Result {
   const existing = s.players.find((p) => p.userId === userId);
   if (existing) {
     // A cashed out player still connects (to see their screen and ask to rejoin) but stays out until the host allows it.
-    return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true }));
+    return mapPlayer(s, userId, (p) => ({ ...p, name, connected: true, avatarUrl: avatarUrl ?? p.avatarUrl }));
   }
   if (s.phase === 'ENDED') return err('WRONG_PHASE');
   if (liveCount(s) >= MAX_PLAYERS) return err('ROOM_FULL');
   const status = s.phase === 'LOBBY' ? 'ACTIVE' : 'WAITING';
-  return ok({ ...s, players: [...s.players, newPlayer(userId, name, s.players.length, status)] });
+  return ok({ ...s, players: [...s.players, { ...newPlayer(userId, name, s.players.length, status), ...(avatarUrl && { avatarUrl }) }] });
 }
 
 function startRound(s: RoomState, sessionId: string): Result {

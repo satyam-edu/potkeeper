@@ -3,13 +3,13 @@ import { showdownPot } from '../../shared/engine';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
 import { roundWinners, seatNet, type Winner } from '../lib/roundResult';
 import { useWakeLock } from '../lib/useWakeLock';
-import { ELLIPSE_MAX, fromViewer, seatPositions } from '../lib/layout';
-import { rupees, signed } from '../lib/format';
+import { fromViewer, seatPositions } from '../lib/layout';
+import { rupees, seatLabels, signed } from '../lib/format';
 import { ActionBar } from './ActionBar';
 import { loadSounds } from '../lib/sound';
 import { ConfirmModal } from './ConfirmModal';
 import { PlayerSheet } from './PlayerSheet';
-import { PotButton } from './PotButton';
+import { BetChip } from './BetChip';
 import { GameTotalSheet } from './GameTotalSheet';
 import { Scoreboard } from './Scoreboard';
 import { WinCard } from './WinCard';
@@ -43,27 +43,35 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
   const myTurn = state.phase === 'BETTING' && turnId === meId && me?.status === 'ACTIVE';
   const staked = state.players.reduce((n, p) => n + p.roundBet, 0);
   const shower = state.players.find((p) => p.userId === state.showBy);
-  const turnName = state.players.find((p) => p.userId === turnId)?.name;
   const seats = fromViewer(state.players.filter((p) => !p.cashedOut), meId); // cashed out players leave the table; they come back if the Host allows a rejoin
   // The D button marks who opened this round (they bet first); it moves on to the next player each round.
   const opener = state.players[state.startIndex];
   const dealerId = opener && !opener.cashedOut ? opener.userId : null;
-  const seat = (p: (typeof seats)[number], fluid = false) => (
+  const labels = seatLabels(seats);
+  const seat = (p: (typeof seats)[number]) => (
     <SeatCard
-      fluid={fluid}
+      label={labels[p.userId] ?? p.name}
       dealer={p.userId === dealerId}
       net={seatNet(state, p)}
       won={!!result?.some((w) => w.userId === p.userId)}
-      onClick={isHost && p.userId !== meId && !p.cashedOut ? () => setSheet(p) : undefined}
+      onClick={isHost && p.userId !== meId ? () => setSheet(p) : undefined}
       p={p} isTurn={state.phase === 'BETTING' && p.userId === turnId} isMe={p.userId === meId} isHost={p.userId === state.hostId} />
   );
   // Only the host can tap the pot to award it. Any player on their turn can still use Show, which opens the same winner list.
   const canAward = state.phase === 'BETTING' && isHost;
   const active = state.players.filter((p) => p.status === 'ACTIVE');
-  const pot = <PotButton pot={state.pot} carry={state.carryOverPot} onTap={canAward && !state.showBy ? () => send({ t: 'SHOW' }) : undefined} />;
+  const pot = <BetChip bet={state.currentBet} onTap={canAward && !state.showBy ? () => send({ t: 'SHOW' }) : undefined} />;
+  // Whose turn it is, under the chip.
+  const betInfo = (
+    <p className="max-w-[150px] text-center text-xs font-semibold leading-tight [overflow-wrap:anywhere]" aria-live="polite">
+      {me?.status === 'WAITING' ? <span className="text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">You'll join next round</span> : myTurn ? <span className="flex items-center justify-center gap-1.5 text-sm font-bold text-neon"><span className="blink h-2 w-2 rounded-full bg-neon" aria-hidden="true" />YOUR TURN</span> : <span className="text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{turnId && labels[turnId] ? `${labels[turnId]}'s turn` : ''}</span>}
+    </p>
+  );
 
   return (
-    <div className="flex h-[calc(100dvh-0.75rem-max(1rem,env(safe-area-inset-bottom)))] flex-col gap-2">
+    <div className="relative isolate flex h-[calc(100dvh-0.75rem-max(1rem,env(safe-area-inset-bottom)))] flex-col gap-2">
+      {/* The room around the table: dark green, lit from the middle, darker at the corners. */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_48%,#12573a_0%,#0a3322_42%,#04130c_78%,#020907_100%)]" />
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="display text-xl font-bold tracking-widest">{state.code}</span>
@@ -84,28 +92,25 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         <SoundToggle className="absolute right-1 top-0" />
       </div>
 
-      {seats.length <= ELLIPSE_MAX ? (
-        <div className="relative mx-auto min-h-0 w-full flex-1">
-          <div aria-hidden="true" className="felt absolute inset-x-[2%] inset-y-[1%] rounded-[50%] border-[10px] border-[#6b4423] ring-2 ring-[#2b1a0d]">
-            <div className="absolute inset-2 rounded-[50%] border border-white/30" />
-          </div>
-          {seatPositions(seats.length, 36, 35).map((pos, i) => (
-            <div key={seats[i]!.userId} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos.left}%`, top: `${pos.top}%` }}>
-              {seat(seats[i]!)}
+      <div className="relative mx-auto min-h-0 w-full flex-1">
+        {/* The table: a bevelled dark rail with stitching, a sunken black lip, and cloth felt (lit from the top, grain, dark edges, faint outline and watermark). */}
+        <div aria-hidden="true" className="absolute inset-x-[2%] inset-y-[1%] rounded-[999px] bg-[linear-gradient(145deg,#52575a_0%,#202322_30%,#0d0f0e_62%,#383c3d_100%)] p-[19px] shadow-[0_16px_30px_rgba(0,0,0,.75),0_0_0_1px_rgba(255,255,255,.08),inset_0_2px_1px_rgba(255,255,255,.22),inset_0_-4px_8px_rgba(0,0,0,.65)]">
+          <div className="pointer-events-none absolute inset-[7px] rounded-[999px] border border-dashed border-white/15" />
+          <div className="h-full w-full rounded-[999px] bg-black p-[3px] shadow-[0_1px_0_rgba(255,255,255,.14),inset_0_3px_7px_rgba(0,0,0,.95)]">
+            <div className="relative h-full w-full overflow-hidden rounded-[999px] bg-[radial-gradient(ellipse_at_50%_36%,#31c46c_0%,#1c9a50_38%,#0d6e36_72%,#07481f_100%)] shadow-[inset_0_7px_20px_rgba(0,0,0,.75),inset_0_-5px_16px_rgba(0,0,0,.5)]">
+              <div className="felt-grain absolute inset-0" />
+              <div className="absolute inset-3.5 rounded-[999px] border border-[#dff7e8]/25 shadow-[0_0_0_1px_rgba(0,0,0,.28),inset_0_0_0_1px_rgba(0,0,0,.18)]" />
+              <span className="display absolute left-1/2 top-[70%] -translate-x-1/2 text-xl tracking-[.4em] text-white/[.08]">POTKEEPER</span>
             </div>
-          ))}
-          <div className="absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2">{pot}</div>
-        </div>
-      ) : (
-        <div className="felt flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-[40px] border-[10px] border-[#6b4423] p-2 ring-2 ring-[#2b1a0d]">
-          {pot}
-          <div className={`grid w-full gap-1.5 ${seats.length > 8 ? 'grid-cols-5' : 'grid-cols-4'}`}>
-            {seats.map((p) => (
-              <div key={p.userId}>{seat(p, true)}</div>
-            ))}
           </div>
         </div>
-      )}
+        {seatPositions(seats.length, 40, 38).map((pos, i) => (
+          <div key={seats[i]!.userId} className={`absolute -translate-x-1/2 -translate-y-1/2 ${seats.length > 8 ? 'scale-[.8]' : seats.length > 6 ? 'scale-90' : ''}`} style={{ left: `${pos.left}%`, top: `${pos.top}%` }}>
+            {seat(seats[i]!)}
+          </div>
+        ))}
+        <div className="absolute left-1/2 top-[46%] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">{state.phase === 'BETTING' && <>{pot}{betInfo}</>}</div>
+      </div>
 
       {winPopup && state.phase === 'BETWEEN_ROUNDS' && result && <WinCard state={state} winners={result} onClose={() => setWinPopup(false)} />}
       {state.phase === 'BETWEEN_ROUNDS' ? (
@@ -121,14 +126,6 @@ export function GameTable({ state, meId, send }: { state: RoomState; meId: strin
         )
       ) : (
         <>
-          <p className="flex items-center justify-center gap-3 rounded-2xl border-2 border-neon bg-surface py-1.5">
-            <span className="blink h-2.5 w-2.5 rounded-full bg-neon" aria-hidden="true" />
-            <span className="text-xs font-bold uppercase tracking-widest text-mid">Current bet</span>
-            <span key={state.currentBet} className="bump text-3xl font-bold leading-none tabular-nums text-neon">{rupees(state.currentBet)}</span>
-          </p>
-          <p className="text-center text-sm font-semibold" aria-live="polite">
-            {me?.status === 'WAITING' ? "You'll join next round" : myTurn ? <span className="text-neon">YOUR TURN</span> : <span className="text-mid">{turnName ? `${turnName}'s turn` : ''}</span>}
-          </p>
           <ActionBar canAct={myTurn && !state.showBy} level={state.currentBet + state.baseBet} onBet={() => send({ t: 'BET' })} onPack={() => send({ t: 'PACK' })} onShow={() => send({ t: 'SHOW' })} />
         </>
       )}

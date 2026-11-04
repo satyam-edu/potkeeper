@@ -46,12 +46,14 @@ export class Room extends Server<Cloudflare.Env> {
       if (this.state) return this.fail(conn, 'ROOM_EXISTS'); // 4-digit code collision: client picks another
       const baseBet = msg.create.baseBet;
       if (!Number.isInteger(baseBet) || baseBet < 1) return this.fail(conn, 'BAD_MESSAGE');
-      this.state = createRoom(this.name, claims.sub, name, baseBet);
+      const made = reduce(createRoom(this.name, claims.sub, name, baseBet), { type: 'JOIN', name, avatarUrl: msg.avatarUrl }, claims.sub); // the host's seat, with their photo
+      if (!made.ok) return this.fail(conn, made.error);
+      this.state = made.state;
       this.users.set(conn.id, claims.sub);
       return this.broadcastState();
     }
     if (!this.state) return this.fail(conn, 'ROOM_NOT_FOUND');
-    const r = reduce(this.state, { type: 'JOIN', name }, claims.sub);
+    const r = reduce(this.state, { type: 'JOIN', name, avatarUrl: msg.avatarUrl }, claims.sub);
     if (!r.ok) return this.fail(conn, r.error);
     this.state = r.state;
     this.users.set(conn.id, claims.sub);

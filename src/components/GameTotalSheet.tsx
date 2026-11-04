@@ -1,5 +1,5 @@
 import type { RoomState } from '../../shared/types';
-import { signed } from '../lib/format';
+import { seatLabels, signed } from '../lib/format';
 
 const tone = (n: number) => (n < 0 ? 'text-danger' : n > 0 ? 'text-neon' : 'text-white');
 
@@ -8,7 +8,8 @@ export function GameTotalSheet({ state, meId, onClose }: { state: RoomState; meI
   const log = state.roundLog ?? []; // a client can briefly see a room that predates the log
   const total = (id: string) => log.reduce((n, r) => n + (r[id] ?? 0), 0);
   const rows = [...state.players].sort((a, b) => total(b.userId) - total(a.userId));
-  const name = (id: string) => state.players.find((p) => p.userId === id)?.name ?? '?';
+  const labels = seatLabels(state.players); // the round by round list is narrow, so it uses the short names
+  const name = (id: string) => labels[id] ?? '?';
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/80" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Game total" onClick={(e) => e.stopPropagation()} className="flex max-h-[85dvh] w-full max-w-[420px] flex-col rounded-t-[28px] bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
@@ -18,8 +19,8 @@ export function GameTotalSheet({ state, meId, onClose }: { state: RoomState; meI
           <ul className="flex flex-col gap-1.5">
             {rows.map((p) => (
               <li key={p.userId} className={`flex items-center justify-between rounded-xl bg-surface-2 px-4 py-2.5 ${p.cashedOut ? 'opacity-50' : ''}`}>
-                <span className={p.userId === meId ? 'font-bold' : ''}>{p.name}</span>
-                <span className={`text-lg font-bold tabular-nums ${tone(total(p.userId))}`}>{signed(total(p.userId))}</span>
+                <span className={`min-w-0 [overflow-wrap:anywhere] ${p.userId === meId ? 'font-bold' : ''}`}>{p.name}</span>
+                <span className={`ml-3 shrink-0 whitespace-nowrap text-lg font-bold tabular-nums ${tone(total(p.userId))}`}>{signed(total(p.userId))}</span>
               </li>
             ))}
           </ul>
@@ -33,9 +34,9 @@ export function GameTotalSheet({ state, meId, onClose }: { state: RoomState; meI
                   <p className="mb-1 text-xs font-bold text-mid">Round {n}</p>
                   <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                     {Object.entries(r).sort((a, b) => b[1] - a[1]).map(([id, v]) => (
-                      <li key={id} className="flex items-baseline justify-between gap-2 text-sm">
-                        <span className={`truncate ${id === meId ? 'font-bold' : 'text-mid'}`}>{name(id)}</span>
-                        <span className={`font-semibold tabular-nums ${tone(v)}`}>{signed(v)}</span>
+                      <li key={id} className="flex items-start justify-between gap-2 text-sm">
+                        <span className={`min-w-0 [overflow-wrap:anywhere] ${id === meId ? 'font-bold' : 'text-mid'}`}>{name(id)}</span>
+                        <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${tone(v)}`}>{signed(v)}</span>
                       </li>
                     ))}
                   </ul>

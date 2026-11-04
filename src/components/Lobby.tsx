@@ -43,7 +43,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
       <section className="rounded-2xl bg-surface p-4">
         <p className="text-xs text-mid">ROOM CODE</p>
         <p className="display text-6xl font-bold tracking-widest text-neon tabular-nums">{state.code}</p>
-        <p className="mt-1 truncate text-sm text-mid">{link}</p>
+        <p className="mt-1 select-text truncate text-sm text-mid">{link}</p>
         <div className="mt-3 flex gap-2">
           <button onClick={copy} className="h-12 flex-1 rounded-xl btn-quiet font-bold active:scale-[.98]">
             {copied ? 'Copied ✓' : 'Copy link'}

@@ -3,6 +3,7 @@ export interface Session {
   name: string;
   token: string;
   isGuest: boolean;
+  avatarUrl?: string; // Google photo link, sent when joining a room so the seat can show it
 }
 
 const KEY = 'pk_session';
@@ -40,11 +41,11 @@ export async function guestLogin(name: string): Promise<Session> {
 }
 
 /** Ask the server who we are. `false` = the account is gone/merged/invalid (sign out); `null` = couldn't reach it (keep going). */
-export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number; email?: string; nextNameChange: string | null } | false | null> {
+export async function checkSession(s: Session): Promise<{ name: string; isGuest: boolean; walletBalance: number; email?: string; avatarUrl?: string; nextNameChange: string | null } | false | null> {
   try {
     const res = await fetch('/api/me', { headers: { authorization: `Bearer ${s.token}` } });
     if (res.status === 401) return false;
-    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number; email?: string; nextNameChange: string | null }) : null;
+    return res.ok ? ((await res.json()) as { name: string; isGuest: boolean; walletBalance: number; email?: string; avatarUrl?: string; nextNameChange: string | null }) : null;
   } catch {
     return null;
   }

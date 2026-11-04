@@ -52,8 +52,8 @@ async function googleLogin(idToken: string): Promise<Session> {
     body: JSON.stringify({ idToken, guestToken: old?.isGuest !== false ? old?.token : undefined }),
   });
   if (!res.ok) throw new Error("Couldn't sign you in with Google");
-  const { token, user } = (await res.json()) as { token: string; user: { id: string; name: string } };
-  const s = { userId: user.id, name: user.name, token, isGuest: false };
+  const { token, user } = (await res.json()) as { token: string; user: { id: string; name: string; avatarUrl?: string } };
+  const s = { userId: user.id, name: user.name, token, isGuest: false, avatarUrl: user.avatarUrl };
   saveSession(s);
   return s;
 }
