@@ -38,6 +38,12 @@ describe.skipIf(!live)('guest → Google merge (live Mongo)', () => {
     expect((await signInWithGoogle(profile('old'), String(guest._id)))!.walletBalance).toBe(50);
   });
 
+  it('a returning Google user gets their new photo; no photo from Google keeps the old one', async () => {
+    await signInWithGoogle({ ...profile('pic'), avatarUrl: 'https://lh3.googleusercontent.com/a=s96' });
+    expect((await signInWithGoogle({ ...profile('pic'), avatarUrl: 'https://lh3.googleusercontent.com/b=s96' }))!.avatarUrl).toBe('https://lh3.googleusercontent.com/b=s96');
+    expect((await signInWithGoogle(profile('pic')))!.avatarUrl).toBe('https://lh3.googleusercontent.com/b=s96');
+  });
+
   it('plain Google sign-in creates an account', async () => {
     expect(await signInWithGoogle(profile('fresh'))).toMatchObject({ isGuest: false, walletBalance: 0 });
   });

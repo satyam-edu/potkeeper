@@ -44,6 +44,7 @@ export function Home() {
   const [about, setAbout] = useState(false);
   const [feedback, setFeedback] = useState(false);
   const [nameLockedUntil, setNameLockedUntil] = useState<string | null>(null); // when a Google user may rename again
+  const [avatar, setAvatar] = useState<string | null>(null); // Google profile photo, if the account has one
   const [email, setEmail] = useState<string | null>(null); // Google account, shown on the log out warning
   const dismissed = () => { try { return sessionStorage.getItem('pk_google_later') === '1'; } catch { return false; } };
   const [sheet, setSheet] = useState(() => !dismissed()); // shown once per browser session unless Google is connected
@@ -56,10 +57,10 @@ export function Home() {
   useEffect(() => {
     if (!session) return;
     void checkSession(session).then((me) => {
-      if (me) { setWallet(me.walletBalance); lastWallet = { userId: session.userId, balance: me.walletBalance }; setEmail(me.email ?? null); setNameLockedUntil(me.nextNameChange); }
+      if (me) { setWallet(me.walletBalance); lastWallet = { userId: session.userId, balance: me.walletBalance }; setEmail(me.email ?? null); setAvatar(me.avatarUrl ?? null); setNameLockedUntil(me.nextNameChange); }
       if (me === false) { lastWallet = null; saveSession(null); setSession(null); }
-      else if (me && (me.isGuest !== session.isGuest || me.name !== session.name)) {
-        const next = { ...session, isGuest: me.isGuest, name: me.name };
+      else if (me && (me.isGuest !== session.isGuest || me.name !== session.name || (me.avatarUrl ?? undefined) !== session.avatarUrl)) {
+        const next = { ...session, isGuest: me.isGuest, name: me.name, avatarUrl: me.avatarUrl ?? undefined };
         saveSession(next);
         setSession(next);
       }
@@ -81,6 +82,7 @@ export function Home() {
       </div>
       <div>
         <p className="flex items-center gap-2 text-3xl font-light text-mid">
+          {avatar && <img src={avatar} alt="" referrerPolicy="no-referrer" onError={() => setAvatar(null)} className="h-11 w-11 shrink-0 rounded-full border-2 border-neon object-cover" />}
           <span className="min-w-0 [overflow-wrap:anywhere]">Hi, {session.name}</span>
           {!session.isGuest && (
             <button onClick={() => setRenaming(true)} aria-label="Change name" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full btn-quiet text-neon active:scale-95">

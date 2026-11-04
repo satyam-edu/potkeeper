@@ -11,6 +11,7 @@ export interface Player {
   roundBet: number; // integer ₹ put in this round (incl. entry); 0 outside BETTING
   cashedOut: boolean; // removed early; balance locked
   wantsRejoin: boolean; // a cashed out player asked to come back; the host decides
+  avatarUrl?: string; // Google profile photo link (only googleusercontent.com, checked in the engine); the seat shows the first letter without it
 }
 
 export interface RoomState {
@@ -36,7 +37,7 @@ export type Snapshot = Omit<RoomState, 'historyStack'>;
 
 // Client → server messages (the `t` discriminator is the wire format).
 export type ClientMessage =
-  | { t: 'JOIN'; token: string; name: string; create?: { baseBet: number } }
+  | { t: 'JOIN'; token: string; name: string; avatarUrl?: string; create?: { baseBet: number } }
   | { t: 'START_ROUND' }
   | { t: 'BET' }
   | { t: 'PACK' }

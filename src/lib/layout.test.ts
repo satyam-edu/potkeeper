@@ -3,8 +3,8 @@ import { fromViewer, seatPositions } from './layout';
 
 describe('seatPositions', () => {
   it('puts the viewer at bottom centre and spreads the rest without overlap', () => {
-    for (let n = 2; n <= 6; n++) {
-      const pos = seatPositions(n);
+    for (let n = 2; n <= 10; n++) {
+      const pos = seatPositions(n, 40, 38);
       expect(pos[0]!.left).toBeCloseTo(50);
       expect(pos[0]!.top).toBeGreaterThan(80);
       for (let i = 0; i < n; i++)

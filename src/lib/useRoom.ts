@@ -39,7 +39,7 @@ export function useRoom(code: string, session: Session, createBaseBet?: number) 
       setOnline(true);
       // `create` only on the very first JOIN; reconnects must not try to create again.
       const create = createRef.current && !joined.current ? { create: { baseBet: createRef.current } } : {};
-      ws.send(JSON.stringify({ t: 'JOIN', token: session.token, name: session.name, ...create }));
+      ws.send(JSON.stringify({ t: 'JOIN', token: session.token, name: session.name, avatarUrl: session.avatarUrl, ...create }));
     });
     ws.addEventListener('close', () => setOnline(false));
     ws.addEventListener('message', (e) => {

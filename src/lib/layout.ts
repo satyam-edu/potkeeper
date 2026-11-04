@@ -1,6 +1,3 @@
-/** Largest roster drawn around the pot; bigger tables fall back to a grid. */
-export const ELLIPSE_MAX = 6;
-
 /**
  * Seat centres as % of the table box. Index 0 (the viewer) sits at the bottom;
  * the rest follow clockwise, matching the real seating order.

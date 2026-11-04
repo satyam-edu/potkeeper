@@ -1,9 +1,10 @@
 import type { RoomState } from '../../shared/types';
-import { signed } from '../lib/format';
+import { seatLabels, signed } from '../lib/format';
 import { seatNet } from '../lib/roundResult';
 
 /** This round's result for every player, biggest first. Tap it for the whole game (see GameTotalSheet). */
 export function Scoreboard({ state, meId, onOpen }: { state: RoomState; meId: string; onOpen: () => void }) {
+  const labels = seatLabels(state.players);
   const rows = state.players.map((p) => ({ p, net: seatNet(state, p) })).sort((a, b) => b.net - a.net);
   return (
     <button onClick={onOpen} aria-label="Open game total" className="block w-full rounded-xl bg-surface px-3 py-2.5 text-left">
@@ -13,9 +14,9 @@ export function Scoreboard({ state, meId, onOpen }: { state: RoomState; meId: st
       </span>
       <span className="grid grid-cols-2 gap-x-5">
         {rows.map(({ p, net }) => (
-          <span key={p.userId} className={`flex items-baseline justify-between gap-2 text-xs leading-6 ${p.cashedOut ? 'opacity-50' : ''}`}>
-            <span className={`truncate ${p.userId === meId ? 'font-bold' : 'text-mid'}`}>{p.name}</span>
-            <span className={`font-semibold tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>{signed(net)}</span>
+          <span key={p.userId} className={`flex items-start justify-between gap-2 py-[3px] text-xs leading-4 ${p.cashedOut ? 'opacity-50' : ''}`}>
+            <span className={`min-w-0 [overflow-wrap:anywhere] ${p.userId === meId ? 'font-bold' : 'text-mid'}`}>{labels[p.userId] ?? p.name}</span>
+            <span className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${net < 0 ? 'text-danger' : net > 0 ? 'text-neon' : 'text-white'}`}>{signed(net)}</span>
           </span>
         ))}
       </span>

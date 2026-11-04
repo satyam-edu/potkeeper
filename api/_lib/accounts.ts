@@ -56,5 +56,7 @@ export async function signInWithGoogle(profile: GoogleProfile, guestId?: string)
       await session.endSession();
     }
   }
+  // A returning user gets their current Google photo (it changes when they change it in Google).
+  if (profile.avatarUrl && existing.avatarUrl !== profile.avatarUrl) await User.updateOne({ _id: existing._id }, { $set: { avatarUrl: profile.avatarUrl } });
   return User.findById(existing._id);
 }
