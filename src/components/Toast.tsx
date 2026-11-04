@@ -9,6 +9,7 @@ const TEXT: Partial<Record<ErrorCode, string>> = {
   WRONG_PHASE: "That can't be done right now",
   NOTHING_TO_UNDO: 'Nothing to undo',
   NOT_SAVED: 'Wait until the game is saved',
+  BAD_INPUT: "Those numbers don't fit this room",
 };
 
 export function Toast({ code, id }: { code: ErrorCode | null; id: number }) {

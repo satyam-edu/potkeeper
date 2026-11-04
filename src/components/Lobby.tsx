@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ClientMessage, Player, RoomState } from '../../shared/types';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../../shared/engine';
 import { ConfirmModal } from './ConfirmModal';
+import { RestoreSheet } from './RestoreSheet';
 
 const PRESETS = [1, 5, 10, 20];
 
@@ -12,6 +13,7 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Player | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   const copy = async () => {
     try {
@@ -110,6 +112,8 @@ export function Lobby({ state, meId, send }: { state: RoomState; meId: string; s
       ) : (
         <p className="py-4 text-center text-mid">Waiting for the host to start…</p>
       )}
+      {isHost && <button onClick={() => setRestoring(true)} className="-mt-2 self-center py-2 text-sm text-mid underline">Restore a lost game</button>}
+      {restoring && <RestoreSheet state={state} send={send} onClose={() => setRestoring(false)} />}
       {removing && (
         <ConfirmModal
           tone="danger"

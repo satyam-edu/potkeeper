@@ -7,6 +7,7 @@ import { MAX_ATTEMPTS, backoffMs, buildPayload, postSettle, type SettlePayload }
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../shared/types';
 
 const MAX_MESSAGE_BYTES = 2048;
+const MAX_RESTORE_BYTES = 32768; // a Restore carries the whole round log, so it is the one message allowed to be big
 const NAME_MAX = 24;
 
 // Room state lives in RAM only — zero DB access during a session.
@@ -17,14 +18,14 @@ export class Room extends Server<Cloudflare.Env> {
   startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
   onMessage(sender: Connection, raw: WSMessage) {
-    if (typeof raw !== 'string' || raw.length > MAX_MESSAGE_BYTES) return this.fail(sender, 'BAD_MESSAGE');
+    if (typeof raw !== 'string' || raw.length > MAX_RESTORE_BYTES) return this.fail(sender, 'BAD_MESSAGE');
     let msg: ClientMessage;
     try {
       msg = JSON.parse(raw) as ClientMessage;
     } catch {
       return this.fail(sender, 'BAD_MESSAGE');
     }
-    if (!msg || typeof msg.t !== 'string') return this.fail(sender, 'BAD_MESSAGE');
+    if (!msg || typeof msg.t !== 'string' || (msg.t !== 'RESTORE' && raw.length > MAX_MESSAGE_BYTES)) return this.fail(sender, 'BAD_MESSAGE');
     return msg.t === 'JOIN' ? this.join(msg, sender) : this.dispatch(msg, sender);
   }
 
@@ -75,7 +76,7 @@ export class Room extends Server<Cloudflare.Env> {
       this.saveStatus = undefined;
       this.startedAt = undefined;
     }
-    if (action.type === 'START_ROUND') this.startedAt ??= new Date().toISOString();
+    if (action.type === 'START_ROUND' || action.type === 'RESTORE') this.startedAt ??= new Date().toISOString();
     if (action.type === 'END_GAME') {
       this.broadcastSettlement();
       return this.saveGame(buildPayload(this.state!, this.startedAt));

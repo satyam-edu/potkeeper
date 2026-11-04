@@ -1,4 +1,4 @@
-import type { EngineError, Player, RoomState, Snapshot } from './types';
+import type { EngineError, Player, RestoreSeat, RoomState, Snapshot } from './types';
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 10;
@@ -22,7 +22,8 @@ export type Action =
   | { type: 'SET_BASE_BET'; baseBet: number }
   | { type: 'REMOVE_PLAYER'; userId: string }
   | { type: 'REQUEST_REJOIN' }
-  | { type: 'ANSWER_REJOIN'; userId: string; allow: boolean };
+  | { type: 'ANSWER_REJOIN'; userId: string; allow: boolean }
+  | { type: 'RESTORE'; sessionId: string; round: number; seats: RestoreSeat[]; opener: string; turn?: string; currentBet?: number; log: Record<string, number>[] };
 
 export type Result = { ok: true; state: RoomState } | { ok: false; error: EngineError };
 
@@ -137,6 +138,7 @@ function apply(s: RoomState, a: Action, actorId: string): Result {
     case 'REMOVE_PLAYER': return isHost ? remove(s, a.userId) : err('NOT_HOST');
     case 'REQUEST_REJOIN': return requestRejoin(s, actorId);
     case 'ANSWER_REJOIN': return isHost ? answerRejoin(s, a.userId, a.allow) : err('NOT_HOST');
+    case 'RESTORE': return isHost ? restore(s, a) : err('NOT_HOST');
   }
 }
 
@@ -380,6 +382,46 @@ function answerRejoin(s: RoomState, userId: string, allow: boolean): Result {
   const status: Player['status'] = s.phase === 'LOBBY' ? 'ACTIVE' : 'WAITING';
   const players = s.players.map((q) => (q.userId === userId ? { ...q, cashedOut: false, wantsRejoin: false, status } : q));
   return ok({ ...s, players, historyStack: [] }); // like a removal, Undo can't go back past it
+}
+
+const MONEY_MAX = 1_000_000;
+const money = (n: unknown): n is number => Number.isInteger(n) && Math.abs(n as number) <= MONEY_MAX;
+
+/**
+ * Recovery for a game whose room was lost: the Host rebuilds it in a fresh room (lobby, nothing played) from the last known
+ * totals. `seats` is the clockwise order and must name exactly the players in the room. With `turn` the round in play is
+ * restored too (pot = what everyone put in); without it the room resumes between rounds. Anything the engine can't make
+ * sense of is rejected whole, and the zero-sum check in `reduce` still has the last word.
+ */
+function restore(s: RoomState, a: Extract<Action, { type: 'RESTORE' }>): Result {
+  if (s.phase !== 'LOBBY' || s.roundNumber !== 0) return err('WRONG_PHASE');
+  const ids = a.seats.map((x) => x.userId);
+  const byId = new Map(s.players.map((p) => [p.userId, p]));
+  if (ids.length !== s.players.length || new Set(ids).size !== ids.length || !ids.every((id) => byId.has(id))) return err('BAD_INPUT');
+  const inRound = a.turn !== undefined;
+  if (!Number.isInteger(a.round) || a.round < (inRound ? 1 : 0) || a.round > 10_000 || !ids.includes(a.opener)) return err('BAD_INPUT');
+  if (!Array.isArray(a.log) || a.log.length > 10_000) return err('BAD_INPUT');
+  for (const entry of a.log) {
+    if (typeof entry !== 'object' || entry === null) return err('BAD_INPUT');
+    if (!Object.entries(entry).every(([id, n]) => byId.has(id) && money(n))) return err('BAD_INPUT');
+  }
+  const level = inRound ? a.currentBet : 0;
+  if (!money(level) || level < 0 || (inRound && level < s.baseBet)) return err('BAD_INPUT');
+  let pot = 0;
+  const players: Player[] = [];
+  for (const [seat, x] of a.seats.entries()) {
+    const staked = inRound ? x.roundBet ?? 0 : 0;
+    if (!money(x.total) || !money(staked) || staked < 0 || staked > level) return err('BAD_INPUT');
+    pot += staked;
+    players.push({ ...byId.get(x.userId)!, seat, status: x.packed ? 'PACKED' : 'ACTIVE', sessionBalance: x.total - staked, roundBet: staked });
+  }
+  const turnAt = inRound ? players.findIndex((p) => p.userId === a.turn) : -1;
+  if (inRound && (players[turnAt]?.status !== 'ACTIVE' || players.filter((p) => p.status === 'ACTIVE').length < MIN_PLAYERS)) return err('BAD_INPUT');
+  return ok({
+    ...s, players, pot, carryOverPot: 0, currentBet: level, phase: inRound ? 'BETTING' : 'BETWEEN_ROUNDS',
+    sessionId: s.sessionId || a.sessionId, currentTurnIndex: turnAt, startIndex: ids.indexOf(a.opener), roundNumber: a.round,
+    roundLog: a.log, showBy: null, historyStack: [],
+  });
 }
 
 function remove(s: RoomState, userId: string): Result {

@@ -465,3 +465,54 @@ describe('roundLog (round by round results)', () => {
     expect(run(ended, { type: 'NEW_GAME' }, 'p1').roundLog).toEqual([]);
   });
 });
+
+describe('restore (rebuild a lost game)', () => {
+  const lobby = () => table(4, 1); // p1 host, p2, p3, p4 in a fresh room
+  const seats = [
+    { userId: 'p3', total: -30, roundBet: 19 },
+    { userId: 'p4', total: 63, roundBet: 20 },
+    { userId: 'p1', total: 53, roundBet: 1, packed: true },
+    { userId: 'p2', total: -86, roundBet: 18 },
+  ];
+  const midRound: Extract<Action, { type: 'RESTORE' }> = { type: 'RESTORE', sessionId: 'sess', round: 26, seats, opener: 'p3', turn: 'p2', currentBet: 20, log: [{ p1: 1, p2: -1 }] };
+
+  it('puts the round in play back: pot, stakes, turn, opener and the log', () => {
+    const s = run(lobby(), midRound, 'p1');
+    expect(s.phase).toBe('BETTING');
+    expect(s.pot).toBe(58);
+    expect(s.currentBet).toBe(20);
+    expect(s.players.map((p) => p.userId)).toEqual(['p3', 'p4', 'p1', 'p2']); // the order given is the seating
+    expect(turn(s)).toBe('p2');
+    expect(s.players[s.startIndex]!.userId).toBe('p3');
+    expect(s.roundNumber).toBe(26);
+    expect(s.roundLog).toEqual([{ p1: 1, p2: -1 }]);
+    expect(checkInvariant(s)).toBe(true);
+  });
+  it('shows the Game total as before the round (balance plus stake) and play carries on from the restored turn', () => {
+    let s = run(lobby(), midRound, 'p1');
+    expect(Object.fromEntries(s.players.map((p) => [p.userId, p.sessionBalance + p.roundBet]))).toEqual({ p1: 53, p2: -86, p3: -30, p4: 63 });
+    s = run(s, { type: 'BET' }, 'p2'); // p2 pays 3 to reach the new level 21
+    expect(s.pot).toBe(61);
+    expect(s.currentBet).toBe(21);
+    expect(turn(s)).toBe('p3');
+  });
+  it('without a turn it resumes between rounds', () => {
+    const s = run(lobby(), { type: 'RESTORE', sessionId: 's', round: 25, opener: 'p4', log: [], seats: seats.map((x) => ({ userId: x.userId, total: x.total })) }, 'p1');
+    expect(s.phase).toBe('BETWEEN_ROUNDS');
+    expect(s.pot).toBe(0);
+    expect(s.players.every((p) => p.roundBet === 0 && p.status === 'ACTIVE')).toBe(true);
+  });
+  it('is Host only and only in a fresh lobby', () => {
+    expect(code(lobby(), midRound, 'p2')).toBe('NOT_HOST');
+    expect(code(started(3), { ...midRound, seats: seats.slice(0, 3) }, 'p1')).toBe('WRONG_PHASE');
+  });
+  it('rejects totals that do not add to zero, and anything that does not match the room', () => {
+    expect(code(lobby(), { ...midRound, seats: seats.map((x) => (x.userId === 'p4' ? { ...x, total: 64 } : x)) }, 'p1')).toBe('INVARIANT');
+    expect(code(lobby(), { ...midRound, seats: seats.slice(0, 3) }, 'p1')).toBe('BAD_INPUT'); // someone missing
+    expect(code(lobby(), { ...midRound, seats: [...seats.slice(0, 3), { userId: 'ghost', total: -86 }] }, 'p1')).toBe('BAD_INPUT');
+    expect(code(lobby(), { ...midRound, seats: seats.map((x) => ({ ...x, total: x.total + 0.5 })) }, 'p1')).toBe('BAD_INPUT');
+    expect(code(lobby(), { ...midRound, turn: 'p1' }, 'p1')).toBe('BAD_INPUT'); // the turn must be someone still in
+    expect(code(lobby(), { ...midRound, currentBet: 10 }, 'p1')).toBe('BAD_INPUT'); // a stake above the table level
+    expect(code(lobby(), { ...midRound, log: [{ ghost: 1 }] }, 'p1')).toBe('BAD_INPUT');
+  });
+});

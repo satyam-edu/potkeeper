@@ -53,7 +53,16 @@ export type ClientMessage =
   | { t: 'SET_BASE_BET'; baseBet: number }
   | { t: 'REMOVE_PLAYER'; userId: string }
   | { t: 'REQUEST_REJOIN' }
-  | { t: 'ANSWER_REJOIN'; userId: string; allow: boolean };
+  | { t: 'ANSWER_REJOIN'; userId: string; allow: boolean }
+  | { t: 'RESTORE'; round: number; seats: RestoreSeat[]; opener: string; turn?: string; currentBet?: number; log: Record<string, number>[] };
+
+/** One player in a Restore: `total` is their Game total before the round in play (finished rounds only), `roundBet` what they have put into the round in play. */
+export interface RestoreSeat {
+  userId: string;
+  total: number;
+  roundBet?: number;
+  packed?: boolean;
+}
 
 // Server → client messages.
 export type ServerMessage =

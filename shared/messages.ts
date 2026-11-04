@@ -20,6 +20,13 @@ export function toAction(msg: ClientMessage, sessionId: string): Action | null {
     case 'REMOVE_PLAYER': return { type: 'REMOVE_PLAYER', userId: String(msg.userId) };
     case 'REQUEST_REJOIN': return { type: 'REQUEST_REJOIN' };
     case 'ANSWER_REJOIN': return { type: 'ANSWER_REJOIN', userId: String(msg.userId), allow: msg.allow === true };
+    case 'RESTORE':
+      if (!Array.isArray(msg.seats) || !Array.isArray(msg.log)) return null;
+      return {
+        type: 'RESTORE', sessionId, round: msg.round, opener: String(msg.opener), currentBet: msg.currentBet, log: msg.log,
+        ...(msg.turn !== undefined && { turn: String(msg.turn) }),
+        seats: msg.seats.map((x) => ({ userId: String(x?.userId), total: x?.total, roundBet: x?.roundBet, packed: x?.packed === true })),
+      };
     default: return null;
   }
 }
