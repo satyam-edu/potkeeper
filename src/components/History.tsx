@@ -32,7 +32,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
       {games?.length === 0 && <p className="text-mid">{settledOnly ? 'No settled games yet. Games you have settled up show here.' : 'No games yet. Your finished games show up here.'}</p>}
       <ul className="flex flex-col gap-2">
         {games?.map((g) => (
-          <li key={g.id} className="rounded-2xl bg-surface">
+          <li key={g.id} className="rounded-2xl bg-ink border border-white/15">
             <button onClick={() => setOpen(open === g.id ? null : g.id)} aria-expanded={open === g.id} className="flex min-h-16 w-full items-center justify-between px-4 py-2 text-left">
               <span className="flex flex-col">
                 <span className="font-bold">{day(g.endedAt)}</span>
@@ -49,7 +49,7 @@ export function History({ session, settledOnly = false }: { session: Session; se
               </span>
             </button>
             {open === g.id && (
-              <ul className="flex flex-col gap-1 border-t border-line px-4 py-3">
+              <ul className="flex flex-col gap-1 border-t border-white/15 px-4 py-3">
                 {g.players.map((p, i) => (
                   <li key={i} className="flex justify-between text-sm">
                     <span className={p.isMe ? 'font-bold' : 'text-mid'}>{p.name}{p.isMe && ' (you)'}</span>
