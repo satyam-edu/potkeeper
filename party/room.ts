@@ -3,6 +3,7 @@ import { createRoom, reduce, type Action } from '../shared/engine';
 import { verifyJwt } from '../shared/jwt';
 import { toAction } from '../shared/messages';
 import { simplifyDebts } from '../shared/settle';
+import { SAVE_KEY, loadSaved, makeSaved, shouldSave, type SaveType } from './persist';
 import { MAX_ATTEMPTS, backoffMs, buildPayload, postSettle, type SettlePayload } from './settleClient';
 import type { ClientMessage, ErrorCode, RoomState, ServerMessage } from '../shared/types';
 
@@ -10,16 +11,38 @@ const MAX_MESSAGE_BYTES = 2048;
 const MAX_RESTORE_BYTES = 32768; // a Restore carries the whole round log, so it is the one message allowed to be big
 const NAME_MAX = 24;
 
-// Room state lives in RAM only — zero DB access during a session.
+// Room state lives in RAM: zero DB access during a session. It is also copied to this room's own Cloudflare storage about once a
+// finished round (see persist.ts), so a restart or wipe brings the room back at its last finished round instead of losing the game.
 export class Room extends Server<Cloudflare.Env> {
   state: RoomState | null = null;
   users = new Map<string, string>(); // connection id → userId
   saveStatus?: 'saved' | 'failed'; // told to anyone who joins after End Game
   startedAt?: string; // when the first round began (RAM only; only feeds the history record)
 
-  /** Runs each time this room's memory starts empty: a new room, or one that was restarted or wiped. A started line for a room code that was already playing means it was wiped. */
-  onStart() {
-    console.log(`room ${this.name} started with empty memory`);
+  /** Runs each time this room's memory starts empty (a new room, or one that was restarted or wiped): load its saved game if it has one. */
+  async onStart() {
+    const raw = await this.ctx.storage.get(SAVE_KEY);
+    if (raw === undefined) return console.log(`room ${this.name} started with empty memory`);
+    const r = loadSaved(raw, Date.now());
+    if (!r.ok) {
+      console.warn(`room ${this.name} dropped its saved game: ${r.reason}`);
+      return this.ctx.storage.delete(SAVE_KEY).catch((e) => console.error(`room ${this.name} could not drop its saved game`, e));
+    }
+    this.state = r.state;
+    this.startedAt = r.startedAt;
+    console.log(`room ${this.name} came back from its saved game at round ${r.state.roundNumber}`);
+  }
+
+  /** Copy the room to storage without making anyone wait for it; a failed save is logged and the game carries on from memory. */
+  private save(prev: RoomState | null, next: RoomState, type: SaveType) {
+    if (!shouldSave(prev, next, type)) return;
+    this.ctx.storage.put(SAVE_KEY, makeSaved(next, this.startedAt, Date.now()), { allowUnconfirmed: true })
+      .catch((e) => console.error(`room ${this.name} could not save the game`, e));
+  }
+
+  /** The game is over (its result is saved to the database separately): forget the room copy so it can't come back. */
+  private forget() {
+    this.ctx.storage.delete(SAVE_KEY).catch((e) => console.error(`room ${this.name} could not delete its saved game`, e));
   }
 
   onMessage(sender: Connection, raw: WSMessage) {
@@ -55,6 +78,7 @@ export class Room extends Server<Cloudflare.Env> {
       const made = reduce(createRoom(this.name, claims.sub, name, baseBet), { type: 'JOIN', name, avatarUrl: msg.avatarUrl }, claims.sub); // the host's seat, with their photo
       if (!made.ok) return this.fail(conn, made.error);
       this.state = made.state;
+      this.save(null, made.state, 'CREATE');
       this.users.set(conn.id, claims.sub);
       return this.broadcastState();
     }
@@ -64,6 +88,7 @@ export class Room extends Server<Cloudflare.Env> {
     }
     const r = reduce(this.state, { type: 'JOIN', name, avatarUrl: msg.avatarUrl }, claims.sub);
     if (!r.ok) return this.fail(conn, r.error);
+    this.save(this.state, r.state, 'JOIN');
     this.state = r.state;
     this.users.set(conn.id, claims.sub);
     this.broadcastState();
@@ -78,6 +103,7 @@ export class Room extends Server<Cloudflare.Env> {
     const resuming = action.type === 'REOPEN_GAME' || action.type === 'NEW_GAME';
     // The next game must not overwrite a result that is still waiting to be saved.
     if (resuming && this.state.hostId === userId && this.state.phase === 'ENDED' && this.saveStatus !== 'saved') return this.fail(conn, 'NOT_SAVED');
+    const prev = this.state;
     const r = this.commit(action, userId);
     if (!r.ok) return this.fail(conn, r.error);
     if (resuming) {
@@ -85,7 +111,9 @@ export class Room extends Server<Cloudflare.Env> {
       this.startedAt = undefined;
     }
     if (action.type === 'START_ROUND' || action.type === 'RESTORE') this.startedAt ??= new Date().toISOString();
+    this.save(prev, r.state, action.type); // after startedAt is settled, so the copy carries it
     if (action.type === 'END_GAME') {
+      this.forget();
       this.broadcastSettlement();
       return this.saveGame(buildPayload(this.state!, this.startedAt));
     }
